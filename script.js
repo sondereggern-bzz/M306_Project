@@ -14,42 +14,50 @@ class DataProcessor {
         this.supplyConsumptionChart = null;
     }
 
-    async readSdat(file) {
-        const text = await file.text();
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(text, "application/xml");
+    async readSdat(files, count) {
+        const filesToRead = count > 0 ? Array.from(files).slice(0, count) : files;
 
-        const observations = xmlDoc.getElementsByTagName("rsm:Observation");
-        for (let observation of observations) {
-            const sequence = parseInt(observation.getElementsByTagName("rsm:Sequence")[0].textContent);
-            const volume = parseFloat(observation.getElementsByTagName("rsm:Volume")[0].textContent);
-            const documentId = xmlDoc.getElementsByTagName("rsm:DocumentID")[0].textContent;
-            const timestamp = sequence * 15;  // Beispiel: Berechnung des Zeitstempels
-            const sensorId = documentId.split('_').pop();
+        for (const file of filesToRead) {
+            const text = await file.text();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(text, "application/xml");
 
-            if (!this.sdatData[sensorId]) {
-                this.sdatData[sensorId] = [];
+            const observations = xmlDoc.getElementsByTagName("rsm:Observation");
+            for (let observation of observations) {
+                const sequence = parseInt(observation.getElementsByTagName("rsm:Sequence")[0].textContent);
+                const volume = parseFloat(observation.getElementsByTagName("rsm:Volume")[0].textContent);
+                const documentId = xmlDoc.getElementsByTagName("rsm:DocumentID")[0].textContent;
+                const timestamp = sequence * 15;  // Beispiel: Berechnung des Zeitstempels
+                const sensorId = documentId.split('_').pop();
+
+                if (!this.sdatData[sensorId]) {
+                    this.sdatData[sensorId] = [];
+                }
+                this.sdatData[sensorId].push(new MeteringData(timestamp, volume, sensorId));
             }
-            this.sdatData[sensorId].push(new MeteringData(timestamp, volume, sensorId));
         }
     }
 
-    async readEsl(file) {
-        const text = await file.text();
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(text, "application/xml");
+    async readEsl(files, count) {
+        const filesToRead = count > 0 ? Array.from(files).slice(0, count) : files;
 
-        const valueRows = xmlDoc.getElementsByTagName("ValueRow");
-        for (let valueRow of valueRows) {
-            const obisCode = valueRow.getAttribute("obis");
-            const value = parseFloat(valueRow.getAttribute("value"));
-            const sensorId = this.mapObisToSensor(obisCode);
+        for (const file of filesToRead) {
+            const text = await file.text();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(text, "application/xml");
 
-            if (sensorId) {
-                if (!this.eslData[sensorId]) {
-                    this.eslData[sensorId] = 0;
+            const valueRows = xmlDoc.getElementsByTagName("ValueRow");
+            for (let valueRow of valueRows) {
+                const obisCode = valueRow.getAttribute("obis");
+                const value = parseFloat(valueRow.getAttribute("value"));
+                const sensorId = this.mapObisToSensor(obisCode);
+
+                if (sensorId) {
+                    if (!this.eslData[sensorId]) {
+                        this.eslData[sensorId] = 0;
+                    }
+                    this.eslData[sensorId] += value;
                 }
-                this.eslData[sensorId] += value;
             }
         }
     }
@@ -64,19 +72,28 @@ class DataProcessor {
         return mapping[obisCode];
     }
 
-    async visualizeData() {
-        // Jetzt werden wir die Diagramme erstellen
-        this.createMeteringChart();
-        this.createSupplyConsumptionChart();
+    async visualizeData(startTime, endTime) {
+        // Vorhandene Diagramme löschen, um neue zu erstellen
+        if (this.meteringChart) {
+            this.meteringChart.destroy();
+        }
+        if (this.supplyConsumptionChart) {
+            this.supplyConsumptionChart.destroy();
+        }
+
+        this.createMeteringChart(startTime, endTime);
+        this.createSupplyConsumptionChart(startTime, endTime);
     }
 
-    createMeteringChart() {
+    createMeteringChart(startTime, endTime) {
         const ctx = document.getElementById('meteringChart').getContext('2d');
         const datasets = [];
 
         for (const sensorId in this.sdatData) {
-            const data = this.sdatData[sensorId].map(d => d.value);
-            const timestamps = this.sdatData[sensorId].map(d => d.timestamp);
+            const filteredData = this.sdatData[sensorId].filter(d => d.timestamp >= startTime && d.timestamp <= endTime);
+            const data = filteredData.map(d => d.value);
+            const timestamps = filteredData.map(d => d.timestamp);
+
             datasets.push({
                 label: sensorId,
                 data: data,
@@ -122,11 +139,12 @@ class DataProcessor {
         });
     }
 
-    createSupplyConsumptionChart() {
+    createSupplyConsumptionChart(startTime, endTime) {
         const ctx = document.getElementById('supplyConsumptionChart').getContext('2d');
         const datasets = [];
 
         for (const sensorId in this.eslData) {
+            // Hier kannst du Logik hinzufügen, um die Daten für dieses Diagramm zu filtern, wenn nötig
             datasets.push({
                 label: sensorId,
                 data: [this.eslData[sensorId]], // Zeitstempel einfügen, falls nötig
@@ -236,14 +254,15 @@ document.getElementById('processData').addEventListener('click', async () => {
     const sdatFiles = sdatFileInput.files;
     const eslFiles = eslFileInput.files;
 
-    for (const file of sdatFiles) {
-        await processor.readSdat(file);
-    }
-    for (const file of eslFiles) {
-        await processor.readEsl(file);
-    }
+    const sdatCount = parseInt(document.getElementById('sdatCount').value);
+    const eslCount = parseInt(document.getElementById('eslCount').value);
+    const startTime = parseInt(document.getElementById('startTime').value) || Number.MIN_SAFE_INTEGER;
+    const endTime = parseInt(document.getElementById('endTime').value) || Number.MAX_SAFE_INTEGER;
 
-    processor.visualizeData();
+    await processor.readSdat(sdatFiles, sdatCount);
+    await processor.readEsl(eslFiles, eslCount);
+
+    processor.visualizeData(startTime, endTime);
 });
 
 document.getElementById('exportCSV').addEventListener('click', () => {
