@@ -5,20 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Datenverarbeitung</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.0/dist/chartjs-plugin-zoom.min.js"></script>
 </head>
 <body>
-<h1>Datenverarbeitung von SDAT und ESL</h1>
+<h1>Datenverarbeitung von sdat und ESL</h1>
 
-<h2>Ordner mit SDAT Dateien hochladen</h2>
-<input type="file" id="sdatFolder" webkitdirectory mozdirectory>
+<h2>SDAT Datei hochladen</h2>
+<input type="file" id="sdatFolder" webkitdirectory directory multiple accept=".xml">
 
-<h2>Ordner mit ESL Dateien hochladen</h2>
-<input type="file" id="eslFolder" webkitdirectory mozdirectory>
+<h2>ESL Datei hochladen</h2>
+<input type="file" id="eslFolder" webkitdirectory directory multiple accept=".xml">
 
 <button id="processData">Daten verarbeiten</button>
 
-<h2>Diagramm</h2>
-<canvas id="chartCanvas" width="400" height="200"></canvas>
+<h2>Zählerstände Diagramm</h2>
+<canvas id="meteringChart" width="400" height="200"></canvas>
+
+<h2>Einspeisung und Bezug Diagramm</h2>
+<canvas id="supplyConsumptionChart" width="400" height="200"></canvas>
+
+<h2>Diagramm Steuerung</h2>
+<label for="timeScale">Zeitliche Skala:</label>
+<select id="timeScale">
+  <option value="days">Tage</option>
+  <option value="weeks">Wochen</option>
+  <option value="months">Monate</option>
+</select>
 
 <h2>Exportieren</h2>
 <button id="exportCSV">Exportiere als CSV</button>

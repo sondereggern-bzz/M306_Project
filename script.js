@@ -10,6 +10,8 @@ class DataProcessor {
     constructor() {
         this.sdatData = {};
         this.eslData = {};
+        this.meteringChart = null;
+        this.supplyConsumptionChart = null;
     }
 
     async readSdat(file) {
@@ -62,12 +64,19 @@ class DataProcessor {
         return mapping[obisCode];
     }
 
-    visualizeData() {
-        const ctx = document.getElementById('chartCanvas').getContext('2d');
+    async visualizeData() {
+        // Jetzt werden wir die Diagramme erstellen
+        this.createMeteringChart();
+        this.createSupplyConsumptionChart();
+    }
+
+    createMeteringChart() {
+        const ctx = document.getElementById('meteringChart').getContext('2d');
         const datasets = [];
+
         for (const sensorId in this.sdatData) {
             const data = this.sdatData[sensorId].map(d => d.value);
-            const labels = this.sdatData[sensorId].map(d => d.timestamp);
+            const timestamps = this.sdatData[sensorId].map(d => d.timestamp);
             datasets.push({
                 label: sensorId,
                 data: data,
@@ -76,29 +85,99 @@ class DataProcessor {
             });
         }
 
-        new Chart(ctx, {
+        this.meteringChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: datasets.length ? datasets[0].data.map((_, index) => index) : [],
+                labels: this.generateLabels(datasets), // Generiere Labels hier
                 datasets: datasets
             },
             options: {
                 scales: {
                     x: {
-                        title: {
-                            display: true,
-                            text: 'Zeitstempel'
-                        }
+                        title: { display: true, text: 'Zeitstempel' }
                     },
                     y: {
-                        title: {
-                            display: true,
-                            text: 'Verbrauch'
+                        title: { display: true, text: 'Zählerstand' },
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    zoom: {
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'x',
+                        },
+                        pan: {
+                            enabled: true,
+                            mode: 'x',
                         }
                     }
                 }
             }
         });
+    }
+
+    createSupplyConsumptionChart() {
+        const ctx = document.getElementById('supplyConsumptionChart').getContext('2d');
+        const datasets = [];
+
+        for (const sensorId in this.eslData) {
+            datasets.push({
+                label: sensorId,
+                data: [this.eslData[sensorId]], // Zeitstempel einfügen, falls nötig
+                borderColor: this.getRandomColor(),
+                fill: false
+            });
+        }
+
+        this.supplyConsumptionChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [0], // Zeitstempel hier hinzufügen
+                datasets: datasets
+            },
+            options: {
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Zeitstempel' }
+                    },
+                    y: {
+                        title: { display: true, text: 'Einspeisung/Bezug' }
+                    }
+                },
+                plugins: {
+                    zoom: {
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'x',
+                        },
+                        pan: {
+                            enabled: true,
+                            mode: 'x',
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    generateLabels(datasets) {
+        // Generiere Labels für die X-Achse, falls nötig
+        if (datasets.length > 0) {
+            const maxLength = Math.max(...datasets.map(ds => ds.data.length));
+            return Array.from({ length: maxLength }, (_, index) => index); // Einfache Indizes als Labels
+        }
+        return [];
     }
 
     exportToCSV() {
@@ -149,36 +228,30 @@ class DataProcessor {
     }
 }
 
-// Globale Instanz des DataProcessor erstellen
-const processor = new DataProcessor();
-
 document.getElementById('processData').addEventListener('click', async () => {
-    const sdatFolderInput = document.getElementById('sdatFolder');
-    const eslFolderInput = document.getElementById('eslFolder');
+    const processor = new DataProcessor();
+    const sdatFileInput = document.getElementById('sdatFolder');
+    const eslFileInput = document.getElementById('eslFolder');
 
-    // Verarbeite SDAT Dateien
-    const sdatFiles = sdatFolderInput.files;
+    const sdatFiles = sdatFileInput.files;
+    const eslFiles = eslFileInput.files;
+
     for (const file of sdatFiles) {
-        if (file.name.endsWith('.xml')) {
-            await processor.readSdat(file);
-        }
+        await processor.readSdat(file);
     }
-
-    // Verarbeite ESL Dateien
-    const eslFiles = eslFolderInput.files;
     for (const file of eslFiles) {
-        if (file.name.endsWith('.xml')) {
-            await processor.readEsl(file);
-        }
+        await processor.readEsl(file);
     }
 
     processor.visualizeData();
 });
 
 document.getElementById('exportCSV').addEventListener('click', () => {
+    const processor = new DataProcessor();
     processor.exportToCSV();
 });
 
 document.getElementById('exportJSON').addEventListener('click', () => {
+    const processor = new DataProcessor();
     processor.exportToJSON();
 });
