@@ -9,50 +9,81 @@ class MeteringData {
 class DataProcessor {
     constructor() {
         this.sdatData = {};
-        this.meteringChart = null;
+        this.eslData = {};
+        this.chart = null; // Hält die Diagramminstanz
     }
 
-    async readSdat(files, count) {
-        const filesToRead = count > 0 ? Array.from(files).slice(0, count) : files;
+    async readSdat(file) {
+        const text = await file.text();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(text, "application/xml");
 
-        for (const file of filesToRead) {
-            const text = await file.text();
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(text, "application/xml");
+        const observations = xmlDoc.getElementsByTagName("rsm:Observation");
+        for (let observation of observations) {
+            const sequence = parseInt(observation.getElementsByTagName("rsm:Sequence")[0].textContent);
+            const volume = parseFloat(observation.getElementsByTagName("rsm:Volume")[0].textContent);
+            const documentId = xmlDoc.getElementsByTagName("rsm:DocumentID")[0].textContent;
+            const timestamp = sequence * 15;  // Beispiel: Berechnung des Zeitstempels
+            const sensorId = documentId.split('_').pop();
 
-            const observations = xmlDoc.getElementsByTagName("rsm:Observation");
-            for (let observation of observations) {
-                const sequence = parseInt(observation.getElementsByTagName("rsm:Sequence")[0].textContent);
-                const volume = parseFloat(observation.getElementsByTagName("rsm:Volume")[0].textContent);
-                const documentId = xmlDoc.getElementsByTagName("rsm:DocumentID")[0].textContent;
-                const timestamp = sequence * 15;  // Beispiel: Berechnung des Zeitstempels
-                const sensorId = documentId.split('_').pop();
+            if (!this.sdatData[sensorId]) {
+                this.sdatData[sensorId] = [];
+            }
+            this.sdatData[sensorId].push(new MeteringData(timestamp, volume, sensorId));
+        }
+    }
 
-                if (!this.sdatData[sensorId]) {
-                    this.sdatData[sensorId] = [];
+    async readEsl(file) {
+        const text = await file.text();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(text, "application/xml");
+
+        const valueRows = xmlDoc.getElementsByTagName("ValueRow");
+        for (let valueRow of valueRows) {
+            const obisCode = valueRow.getAttribute("obis");
+            const value = parseFloat(valueRow.getAttribute("value"));
+            const sensorId = this.mapObisToSensor(obisCode);
+
+            if (sensorId) {
+                if (!this.eslData[sensorId]) {
+                    this.eslData[sensorId] = 0;
                 }
-                this.sdatData[sensorId].push(new MeteringData(timestamp, volume, sensorId));
+                this.eslData[sensorId] += value;
             }
         }
     }
 
-    async visualizeData(startTime, endTime) {
-        // Vorhandenes Diagramm löschen, um neues zu erstellen
-        if (this.meteringChart) {
-            this.meteringChart.destroy();
-        }
-
-        this.createMeteringChart(startTime, endTime);
+    mapObisToSensor(obisCode) {
+        const mapping = {
+            '1-1:1.8.1': 'ID742',
+            '1-1:1.8.2': 'ID742',
+            '1-1:2.8.1': 'ID735',
+            '1-1:2.8.2': 'ID735',
+        };
+        return mapping[obisCode];
     }
 
-    createMeteringChart(startTime, endTime) {
+    visualizeData(startTime, endTime) {
         const ctx = document.getElementById('meteringChart').getContext('2d');
-        const datasets = [];
 
+        // Wenn das Diagramm bereits existiert, löschen wir es
+        if (this.chart) {
+            this.chart.destroy(); // Zerstöre das bestehende Diagramm
+        }
+
+        const datasets = [];
+        let allLabels = []; // Alle Labels sammeln
         for (const sensorId in this.sdatData) {
-            const filteredData = this.sdatData[sensorId].filter(d => d.timestamp >= startTime && d.timestamp <= endTime);
+            // Filtern der Daten basierend auf dem Zeitstempel
+            const filteredData = this.sdatData[sensorId].filter(data => {
+                return (!startTime || data.timestamp >= startTime) && (!endTime || data.timestamp <= endTime);
+            });
+
             const data = filteredData.map(d => d.value);
-            const timestamps = filteredData.map(d => d.timestamp);
+            const labels = filteredData.map(d => d.timestamp);
+            if (labels.length) {
+                allLabels = labels; // Setze die Labels auf die gefilterten Labels
+            }
 
             datasets.push({
                 label: sensorId,
@@ -62,50 +93,47 @@ class DataProcessor {
             });
         }
 
-        this.meteringChart = new Chart(ctx, {
+        // Erstelle ein neues Diagramm
+        this.chart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: this.generateLabels(datasets), // Generiere Labels hier
+                labels: allLabels.length ? allLabels : [], // Verwende die gesammelten Labels
                 datasets: datasets
             },
             options: {
                 scales: {
                     x: {
-                        title: { display: true, text: 'Zeitstempel' }
+                        title: {
+                            display: true,
+                            text: 'Zeitstempel'
+                        },
+                        min: 0, // Optional: Setze den Minimalwert
+                        max: Math.max(...allLabels) // Optional: Setze den Maximalwert
                     },
                     y: {
-                        title: { display: true, text: 'Zählerstand' },
-                        beginAtZero: true
+                        title: {
+                            display: true,
+                            text: 'Verbrauch'
+                        },
+                        min: 0, // Zählerstände können nur steigen
                     }
                 },
+                responsive: false,
+                maintainAspectRatio: false, // Ermöglicht das responsive Verhalten
                 plugins: {
                     zoom: {
-                        zoom: {
-                            wheel: {
-                                enabled: true,
-                            },
-                            pinch: {
-                                enabled: true
-                            },
-                            mode: 'x',
-                        },
                         pan: {
                             enabled: true,
-                            mode: 'x',
+                            mode: 'x', // Nur horizontal pannen
+                        },
+                        zoom: {
+                            enabled: true,
+                            mode: 'x', // Nur horizontal zoomen
                         }
                     }
                 }
             }
         });
-    }
-
-    generateLabels(datasets) {
-        // Generiere Labels für die X-Achse, falls nötig
-        if (datasets.length > 0) {
-            const maxLength = Math.max(...datasets.map(ds => ds.data.length));
-            return Array.from({ length: maxLength }, (_, index) => index); // Einfache Indizes als Labels
-        }
-        return [];
     }
 
     exportToCSV() {
@@ -159,16 +187,25 @@ class DataProcessor {
 document.getElementById('processData').addEventListener('click', async () => {
     const processor = new DataProcessor();
     const sdatFileInput = document.getElementById('sdatFolder');
+    const eslFileInput = document.getElementById('eslFolder');
+    const startTime = parseInt(document.getElementById('startTime').value);
+    const endTime = parseInt(document.getElementById('endTime').value);
 
     const sdatFiles = sdatFileInput.files;
+    const eslFiles = eslFileInput.files;
 
-    const sdatCount = parseInt(document.getElementById('sdatCount').value);
-    const startTime = parseInt(document.getElementById('startTime').value) || Number.MIN_SAFE_INTEGER;
-    const endTime = parseInt(document.getElementById('endTime').value) || Number.MAX_SAFE_INTEGER;
+    // SDAT-Dateien lesen
+    for (const file of sdatFiles) {
+        await processor.readSdat(file);
+    }
 
-    await processor.readSdat(sdatFiles, sdatCount);
+    // ESL-Dateien lesen
+    for (const file of eslFiles) {
+        await processor.readEsl(file);
+    }
 
-    processor.visualizeData(startTime, endTime);
+    // Daten visualisieren
+    processor.visualizeData(startTime || undefined, endTime || undefined);
 });
 
 document.getElementById('exportCSV').addEventListener('click', () => {
