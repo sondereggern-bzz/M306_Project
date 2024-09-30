@@ -1,24 +1,33 @@
 <!DOCTYPE html>
-<html lang="de-CH">
+<html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Energieverwaltung</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zählerdaten-Visualisierung</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+      body {
+          font-family: Arial, sans-serif;
+          margin: 20px;
+      }
+      #result {
+          margin-top: 20px;
+      }
+  </style>
 </head>
 <body>
-<header>
-  <nav>
-  </nav>
-</header>
+<h1>Zählerdaten-Visualisierung</h1>
+<form id="uploadForm">
+  <label for="sdatFolder">SDAT Ordner:</label>
+  <input type="file" id="sdatFolder" webkitdirectory directory required><br><br>
 
-<main>
-  <article>
-    <section>
-    </section>
-    <section>
-    </section>
-  </article>
-</main>
-<footer>
-</footer>
-</body>
-</html>
+  <label for="eslFolder">ESL Ordner:</label>
+  <input type="file" id="eslFolder" webkitdirectory directory required><br><br>
+
+  <button type="submit">Hochladen und Verarbeiten</button>
+</form>
+
+<div id="result">
+  <canvas id="consumptionChart" width="400" height="200"></canvas>
+  <canvas id="meterChart" width="400" height="200"></canvas>
+</div>
