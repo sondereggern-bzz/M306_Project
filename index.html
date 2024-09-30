@@ -3,34 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zählerdaten-Visualisierung</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="script.js" defer></script>
-  <style>
-      body {
-          font-family: Arial, sans-serif;
-          margin: 20px;
-      }
-      #result {
-          margin-top: 20px;
-      }
-  </style>
+  <title>Datenverarbeitung</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>
-<h1>Zählerdaten-Visualisierung</h1>
-<form id="uploadForm">
-  <label for="sdatFolder">SDAT Ordner:</label>
-  <input type="file" id="sdatFolder" webkitdirectory directory required><br><br>
+<h1>Datenverarbeitung von sdat und ESL</h1>
 
-  <label for="eslFolder">ESL Ordner:</label>
-  <input type="file" id="eslFolder" webkitdirectory directory required><br><br>
+<h2>SDAT Datei hochladen</h2>
+<input type="file" id="sdatFile" accept=".xml">
 
-  <button type="submit">Hochladen und Verarbeiten</button>
-</form>
+<h2>ESL Datei hochladen</h2>
+<input type="file" id="eslFile" accept=".xml">
 
-<div id="result">
-  <canvas id="consumptionChart" width="400" height="200"></canvas>
-  <canvas id="meterChart" width="400" height="200"></canvas>
-</div>
+<button id="processData">Daten verarbeiten</button>
+
+<h2>Diagramm</h2>
+<canvas id="chartCanvas" width="400" height="200"></canvas>
+
+<h2>Exportieren</h2>
+<button id="exportCSV">Exportiere als CSV</button>
+<button id="exportJSON">Exportiere als JSON</button>
+
+<script src="script.js"></script>
 </body>
 </html>
