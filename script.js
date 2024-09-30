@@ -149,26 +149,36 @@ class DataProcessor {
     }
 }
 
-document.getElementById('processData').addEventListener('click', async () => {
-    const processor = new DataProcessor();
-    const sdatFileInput = document.getElementById('sdatFile');
-    const eslFileInput = document.getElementById('eslFile');
+// Globale Instanz des DataProcessor erstellen
+const processor = new DataProcessor();
 
-    if (sdatFileInput.files.length > 0) {
-        await processor.readSdat(sdatFileInput.files[0]);
+document.getElementById('processData').addEventListener('click', async () => {
+    const sdatFolderInput = document.getElementById('sdatFolder');
+    const eslFolderInput = document.getElementById('eslFolder');
+
+    // Verarbeite SDAT Dateien
+    const sdatFiles = sdatFolderInput.files;
+    for (const file of sdatFiles) {
+        if (file.name.endsWith('.xml')) {
+            await processor.readSdat(file);
+        }
     }
-    if (eslFileInput.files.length > 0) {
-        await processor.readEsl(eslFileInput.files[0]);
+
+    // Verarbeite ESL Dateien
+    const eslFiles = eslFolderInput.files;
+    for (const file of eslFiles) {
+        if (file.name.endsWith('.xml')) {
+            await processor.readEsl(file);
+        }
     }
+
     processor.visualizeData();
 });
 
 document.getElementById('exportCSV').addEventListener('click', () => {
-    const processor = new DataProcessor();
     processor.exportToCSV();
 });
 
 document.getElementById('exportJSON').addEventListener('click', () => {
-    const processor = new DataProcessor();
     processor.exportToJSON();
 });
