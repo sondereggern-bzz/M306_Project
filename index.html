@@ -1,24 +1,82 @@
 <!DOCTYPE html>
-<html lang="de-CH">
+<html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Energieverwaltung</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anwendung - Energieagentur Bünzli</title>
+  <link rel='stylesheet' href='style.css'>
 </head>
 <body>
 <header>
-  <nav>
-  </nav>
+  <br>
+  <img src="images/logo.png" alt="Logo">
+  <h1>Energieagentur Bünzli Stromverbrauch</h1>
+  <br>
 </header>
 
-<main>
-  <article>
-    <section>
-    </section>
-    <section>
-    </section>
-  </article>
-</main>
+<div class="content">
+  <h1>Strombezug/-Einspeisung</h1>
+  <p>
+    Der Verbrauch und die Einspeisung von Strom hat auf der ganzen Welt eine wichtige Rolle in der Wirtschaft. Wir freuen uns, dass sie unsere Dienste verwenden, um diese Daten auszulesen. Sie sehen ein Liniendiagramm mit der möglichkeit die Skalierung zu verändern. Die möglichen Zeitachsen sind: Tage, Wochen, Monate, Jahre.  </p>
+
+  <div class="container">
+    <div class="box">
+      <span>Diagramm</span>
+    </div>
+    </div>
+  <h2>Benutzerspezifische Abfrage anhand verschiedener Skalierungen</h2>
+  <label for="diagramFilter">Skalierung</label>
+  <select id="diagramFilter">
+    <option value="1">Tage</option>
+    <option value="2">Wochen</option>
+    <option value="3">Monate</option>
+    <option value="4" selected>Jahre</option>
+  </select>
+
+  <h2>Upload</h2>
+  <div class="file-upload">
+    <label for="fileInput">Dateien wählen</label>
+    <input type="file" id="fileInput" multiple>
+    <p>Dateien hierher ziehen oder manuell auswählen.</p>
+  </div>
+  <button>Export data</button>
+</div>
+
 <footer>
+
 </footer>
+
+<div id="exportModal" style="display:none;">
+  <div style="background-color: white; padding: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); max-width: 400px; margin: auto;">
+    <h2>Dateien exportieren</h2>
+    <label for="exportFormat">Data Format</label>
+    <select id="exportFormat">
+      <option value="">Format auswählen</option>
+      <option value="csv">CSV</option>
+      <option value="json">JSON</option>
+    </select>
+    <button>Abbrechen</button>
+    <button>Export</button>
+  </div>
+</div>
 </body>
+<footer>
+  <section>
+    <ul>
+      <li><h2>Nic Sonderegger </h2></li>
+      <li>Reberweg 30</li>
+      <li>8132 Egg</li>
+      <li>Schweiz</li>
+      <li>E-Mail: sondereggern@bzz.ch</li>
+    </ul>
+  </section>
+  <section>
+    <ul>
+      <li><h2>Links</h2></li>
+      <li><a href='impressum.html'>Impressum</a></li>
+      <li><a href='disclaimer.html'>Disclaimer</a></li>
+      <li><a href='datenschutzerklaerung.html'>Datenschutzerklärung</a></li>
+    </ul>
+  </section>
+</footer>
 </html>
