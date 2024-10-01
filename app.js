@@ -40,16 +40,25 @@ document.getElementById('processData').addEventListener('click', function () {
                         const endTime = new Date(endDateTime);
                         const totalSequences = xmlDoc.getElementsByTagName('rsm:Sequence').length
 
-                        const days = totalSequences / 96
+                        const days = Math.floor(totalSequences / 96);
                         for (let x = 0; x < days; x++) {
-                            let fileVolume = 0
+                            let fileVolume = 0;
                             for (let y = 0; y < 96; y++) {
                                 const index = x * 96 + y;
-                                const volumeValue = parseFloat(volumes[index].textContent);
-                                if (!isNaN(volumeValue)) {
-                                    fileVolume += volumeValue; // Accumulate volume for the current file
+
+                                // Check if the index is within bounds
+                                if (index < volumes.length) {
+                                    const volumeValue = parseFloat(volumes[index]?.textContent);
+                                    if (!isNaN(volumeValue)) {
+                                        fileVolume += volumeValue; // Accumulate volume for the current file
+                                    }
+                                } else {
+                                    console.warn(`Index ${index} is out of bounds for volumes array of length ${volumes.length}`);
+                                    break; // Exit the loop if we go out of bounds
                                 }
                             }
+
+
                             startTime.setDate(startTime.getDate() + x);
                             const dateTime = startTime.toISOString();
                             if (dateTime in volumeByStartTime) {
@@ -74,7 +83,6 @@ document.getElementById('processData').addEventListener('click', function () {
                         sortedVolumeByStartTime[key] = volumeByStartTime[key];
                     });
                     console.log(sortedVolumeByStartTime);
-                    console.log(sortedVolumeByStartTime['2019-03-11T23:00:00.000Z']);
                 }
                 // Log all volumes keyed by adjusted start time after processing the last file
             };
