@@ -1,8 +1,9 @@
 class MeteringData {
     constructor(timestamp, value, sensorId) {
-        this.timestamp = timestamp;
-        this.value = value;
+        this.timestamp = timestamp; // Day since epoch
+        this.value = value; // Consumption value
         this.sensorId = sensorId;
+        this.meterReading = 0; // Initialize cumulative meter reading
     }
 }
 
@@ -10,7 +11,7 @@ class DataProcessor {
     constructor() {
         this.sdatData = {};
         this.eslData = {};
-        this.chart = null; // Hält die Diagramminstanz
+        this.chart = null; // Holds the chart instance
     }
 
     async readSdat(file) {
@@ -23,13 +24,19 @@ class DataProcessor {
             const sequence = parseInt(observation.getElementsByTagName("rsm:Sequence")[0].textContent);
             const volume = parseFloat(observation.getElementsByTagName("rsm:Volume")[0].textContent);
             const documentId = xmlDoc.getElementsByTagName("rsm:DocumentID")[0].textContent;
-            const timestamp = sequence * 15;  // Beispiel: Berechnung des Zeitstempels
+
+            // Calculate timestamp in whole days (assuming sequence is in 15 min intervals)
+            const timestamp = Math.floor(sequence * 15 / (24 * 60)); // Convert to days since epoch
             const sensorId = documentId.split('_').pop();
 
+            // Ensure the sensor data structure exists
             if (!this.sdatData[sensorId]) {
                 this.sdatData[sensorId] = [];
             }
-            this.sdatData[sensorId].push(new MeteringData(timestamp, volume, sensorId));
+
+            // Add the consumption data
+            const meteringData = new MeteringData(timestamp, volume, sensorId);
+            this.sdatData[sensorId].push(meteringData);
         }
     }
 
@@ -45,12 +52,12 @@ class DataProcessor {
             const sensorId = this.mapObisToSensor(obisCode);
 
             if (sensorId) {
-                if (!this.eslData[sensorId]) {
-                    this.eslData[sensorId] = 0;
-                }
-                this.eslData[sensorId] += value;
+                this.eslData[sensorId] = value; // Store absolute reading
             }
         }
+
+        // Now update the meter readings in sdatData based on ESL
+        this.calculateMeterReadings();
     }
 
     mapObisToSensor(obisCode) {
@@ -63,41 +70,52 @@ class DataProcessor {
         return mapping[obisCode];
     }
 
-    visualizeData(startTime, endTime) {
+    calculateMeterReadings() {
+        for (const sensorId in this.sdatData) {
+            // Initialize accumulated reading with the latest ESL reading or 0 if not available
+            let accumulatedReading = this.eslData[sensorId] || 0;
+
+            // Calculate cumulative meter readings
+            this.sdatData[sensorId].forEach(data => {
+                // Accumulate consumption into the accumulated reading
+                accumulatedReading += data.value; // Accumulate consumption
+                data.meterReading = accumulatedReading; // Update meter reading to reflect total consumption
+            });
+        }
+    }
+
+    visualizeData() {
         const ctx = document.getElementById('meteringChart').getContext('2d');
 
-        // Wenn das Diagramm bereits existiert, löschen wir es
+        // Destroy existing chart if it exists
         if (this.chart) {
-            this.chart.destroy(); // Zerstöre das bestehende Diagramm
+            this.chart.destroy();
         }
 
         const datasets = [];
-        let allLabels = []; // Alle Labels sammeln
+        const allLabels = new Set(); // Collect all unique day labels
         for (const sensorId in this.sdatData) {
-            // Filtern der Daten basierend auf dem Zeitstempel
-            const filteredData = this.sdatData[sensorId].filter(data => {
-                return (!startTime || data.timestamp >= startTime) && (!endTime || data.timestamp <= endTime);
-            });
+            // Prepare data for the chart
+            const timestamps = this.sdatData[sensorId].map(data => data.timestamp);
+            const meterReadings = this.sdatData[sensorId].map(data => data.meterReading);
 
-            const data = filteredData.map(d => d.value);
-            const labels = filteredData.map(d => d.timestamp);
-            if (labels.length) {
-                allLabels = labels; // Setze die Labels auf die gefilterten Labels
-            }
-
+            // Create a unique dataset for this sensor
             datasets.push({
                 label: sensorId,
-                data: data,
+                data: meterReadings,
                 borderColor: this.getRandomColor(),
                 fill: false
             });
+
+            // Add unique timestamps for the X-axis labels
+            timestamps.forEach(timestamp => allLabels.add(`Tag ${timestamp}`));
         }
 
-        // Erstelle ein neues Diagramm
+        // Create a new chart
         this.chart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: allLabels.length ? allLabels : [], // Verwende die gesammelten Labels
+                labels: Array.from(allLabels), // Use unique labels for days
                 datasets: datasets
             },
             options: {
@@ -105,30 +123,29 @@ class DataProcessor {
                     x: {
                         title: {
                             display: true,
-                            text: 'Zeitstempel'
+                            text: 'Tag' // X-axis title in German
                         },
-                        min: 0, // Optional: Setze den Minimalwert
-                        max: Math.max(...allLabels) // Optional: Setze den Maximalwert
                     },
                     y: {
                         title: {
                             display: true,
-                            text: 'Verbrauch'
+                            text: 'Gesamtzählerstand' // Y-axis title in German
                         },
-                        min: 0, // Zählerstände können nur steigen
+                        min: 0, // Meter readings can only increase
                     }
                 },
                 responsive: false,
-                maintainAspectRatio: false, // Ermöglicht das responsive Verhalten
+                maintainAspectRatio: false, // Allows responsive behavior
                 plugins: {
                     zoom: {
-                        pan: {
-                            enabled: true,
-                            mode: 'x', // Nur horizontal pannen
+                        wheel: {
+                            enabled: true, // Allow zooming with the wheel
                         },
-                        zoom: {
-                            enabled: true,
-                            mode: 'x', // Nur horizontal zoomen
+                        drag: {
+                            enabled: true, // Allow dragging to pan
+                        },
+                        pinch: {
+                            enabled: true // Allow pinch to zoom
                         }
                     }
                 }
@@ -137,10 +154,10 @@ class DataProcessor {
     }
 
     exportToCSV() {
-        let csvContent = "data:text/csv;charset=utf-8,timestamp,value,sensor_id\n";
+        let csvContent = "data:text/csv;charset=utf-8,timestamp,meter_reading,sensor_id\n";
         for (const sensorId in this.sdatData) {
             this.sdatData[sensorId].forEach(data => {
-                csvContent += `${data.timestamp},${data.value},${sensorId}\n`;
+                csvContent += `${data.timestamp},${data.meterReading},${sensorId}\n`;
             });
         }
         const encodedUri = encodeURI(csvContent);
@@ -156,7 +173,7 @@ class DataProcessor {
         for (const sensorId in this.sdatData) {
             const dataPoints = this.sdatData[sensorId].map(data => ({
                 ts: data.timestamp,
-                value: data.value
+                meterReading: data.meterReading
             }));
             jsonData.push({
                 sensorId: sensorId,
@@ -184,36 +201,33 @@ class DataProcessor {
     }
 }
 
+const processor = new DataProcessor();
+
 document.getElementById('processData').addEventListener('click', async () => {
-    const processor = new DataProcessor();
     const sdatFileInput = document.getElementById('sdatFolder');
     const eslFileInput = document.getElementById('eslFolder');
-    const startTime = parseInt(document.getElementById('startTime').value);
-    const endTime = parseInt(document.getElementById('endTime').value);
 
     const sdatFiles = sdatFileInput.files;
     const eslFiles = eslFileInput.files;
 
-    // SDAT-Dateien lesen
+    // Read SDAT files
     for (const file of sdatFiles) {
         await processor.readSdat(file);
     }
 
-    // ESL-Dateien lesen
+    // Read ESL files
     for (const file of eslFiles) {
         await processor.readEsl(file);
     }
 
-    // Daten visualisieren
-    processor.visualizeData(startTime || undefined, endTime || undefined);
+    // Visualize data
+    processor.visualizeData();
 });
 
 document.getElementById('exportCSV').addEventListener('click', () => {
-    const processor = new DataProcessor();
     processor.exportToCSV();
 });
 
 document.getElementById('exportJSON').addEventListener('click', () => {
-    const processor = new DataProcessor();
     processor.exportToJSON();
 });
