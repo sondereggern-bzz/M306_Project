@@ -24,7 +24,6 @@ document.getElementById('processData').addEventListener('click', function () {
 
                 // Get all <rsm:Volume> elements
                 const volumes = xmlDoc.getElementsByTagName('rsm:Volume');
-                let fileVolume = 0; // Reset fileVolume for each file
 
                 // Get the start and end times from <rsm:ReportPeriod>
                 const startDateTime = xmlDoc.getElementsByTagName('rsm:StartDateTime')[0]?.textContent;
@@ -37,66 +36,52 @@ document.getElementById('processData').addEventListener('click', function () {
                 if (documentID && documentID.includes('ID742')) {
                     // Calculate total duration in minutes if both start and end time are present
                     if (startDateTime && endDateTime) {
-                        const startTime = new Date(startDateTime);
+                        let startTime = new Date(startDateTime);
                         const endTime = new Date(endDateTime);
-                        const totalDurationInMinutes = (endTime - startTime) / (1000 * 60); // Convert milliseconds to minutes
-                        const totalSequences = totalDurationInMinutes / 15; // Calculate total sequences (15 min intervals)
+                        const totalSequences = xmlDoc.getElementsByTagName('rsm:Sequence').length
 
-                        // Process volumes and calculate total volume for this file
-                        for (let j = 0; j < volumes.length; j++) {
-                            const volumeValue = parseFloat(volumes[j].textContent);
-                            if (!isNaN(volumeValue)) {
-                                fileVolume += volumeValue; // Accumulate volume for the current file
+                        const days = totalSequences / 96
+                        for (let x = 0; x < days; x++) {
+                            let fileVolume = 0
+                            for (let y = 0; y < 96; y++) {
+                                const index = x * 96 + y;
+                                const volumeValue = parseFloat(volumes[index].textContent);
+                                if (!isNaN(volumeValue)) {
+                                    fileVolume += volumeValue; // Accumulate volume for the current file
+                                }
                             }
-                        }
-
-                        // Process the adjusted timestamps based on sequences
-                        for (let k = 0; k < totalSequences; k++) {
-                            const currentSequence = k + 1; // Current sequence starts from 1
-                            let adjustedStartTime = new Date(startTime);
-                            // Check if we need to add a day
-                            if (currentSequence % 96 === 0) {
-                                adjustedStartTime.setDate(adjustedStartTime.getDate() + (currentSequence / 96));
-                            }
-
-                            // Use ISO string format for consistency in the dictionary
-                            const adjustedStartTimeString = adjustedStartTime.toISOString();
-
-                            // Check if the adjusted start time already exists in volumeByStartTime
-                            if (!(adjustedStartTimeString in volumeByStartTime)) {
-                                // Save the volume for this adjusted start time
-                                volumeByStartTime[adjustedStartTimeString] = { volume: fileVolume, sequences: totalSequences };
-                                console.log(`Total Volume for ${file.name} at ${adjustedStartTimeString}:`, fileVolume, `with ${totalSequences} sequences.`);
+                            startTime.setDate(startTime.getDate() + x);
+                            const dateTime = startTime.toISOString();
+                            if (dateTime in volumeByStartTime) {
+                                console.log("Key already exists");
                             } else {
-                                console.log(`Start time ${adjustedStartTimeString} already exists. Skipping ${file.name}.`);
+                                volumeByStartTime[dateTime] = fileVolume
                             }
+
                         }
-                    } else {
-                        console.log(`No <rsm:StartDateTime> or <rsm:EndDateTime> found in ${file.name}.`);
                     }
-                } else {
-                    console.log(`Document ID does not match ID742 in ${file.name}. Skipping.`);
                 }
 
                 // Increment the processed files counter
                 filesProcessed++;
 
-                // Log all volumes keyed by adjusted start time after processing the last file
-                if (filesProcessed === sdatFolder.length) {
-                    // Convert the object to an array and sort it by start time
-                    const sortedEntries = Object.entries(volumeByStartTime).sort(([timeA], [timeB]) => new Date(timeA) - new Date(timeB));
 
-                    // Log the sorted dictionary
-                    console.log('Volumes by Start Time (Sorted):');
-                    sortedEntries.forEach(([time, data]) => {
-                        console.log(`Time: ${time}, Volume: ${data.volume}, Sequences: ${data.sequences}`);
+                if (filesProcessed === sdatFolder.length) {
+                    // Sort and log volumeByStartTime once all files are processed
+                    const sortedKeys = Object.keys(volumeByStartTime).sort();
+                    const sortedVolumeByStartTime = {};
+                    sortedKeys.forEach(key => {
+                        sortedVolumeByStartTime[key] = volumeByStartTime[key];
                     });
+                    console.log(sortedVolumeByStartTime);
+                    console.log(sortedVolumeByStartTime['2019-03-11T23:00:00.000Z']);
                 }
+                // Log all volumes keyed by adjusted start time after processing the last file
             };
 
             reader.readAsText(file);
         } else {
-            console.log(`File ${file.name} is not an XML file and will be skipped.`);
+          //  console.log(`File ${file.name} is not an XML file and will be skipped.`);
             filesProcessed++; // Increment even for non-XML files to ensure we check total at the end
         }
     }
