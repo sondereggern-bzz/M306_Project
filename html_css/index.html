@@ -9,7 +9,7 @@
 <body>
 <header>
   <br>
-  <a class='button' href='index.html'><img src="images/logo.png" alt="Logo"></a>
+  <a class='button' href='index.html'><img src="../images/logo.png" alt="Logo"></a>
   <h1>Energieagentur Bünzli Stromverbrauch</h1>
   <br>
 </header>
@@ -39,8 +39,29 @@
     <input type="file" id="fileInput" multiple>
     <p>Bitte hier gewünschte Datei auswählen.</p>
   </div>
-  <button>Export data</button>
+  <button type=reset id='sendButton'>Send</button>
 </div>
+<script>
+    // Test für den Dateiinhalt bei input
+    document.getElementById('sendButton').addEventListener('click', function() {
+        const files = document.getElementById('fileInput').files;
+        const file_array = Array.from(files);
+        file_array.forEach(file => {
+            console.log('Dateiname:', file.name);
+            console.log(file.text())
+        });
+        Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(event){
+            const file_content = event.target.result;
+            console.log(`Inhalt der Datei ${file.name}:`, file_content);
+        };
+
+
+            reader.readAsText(file);
+        })});
+        // Neue Files werden in der file_array variabel gespeichert
+</script>
 
 
 <div id="exportModal">
