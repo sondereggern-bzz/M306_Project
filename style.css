@@ -31,6 +31,11 @@ header img {
     right: 20px;
     height: 120px;
 }
+.button {
+    position: absolute;
+    right: 20px;
+    height: 120px;
+}
 
 .content {
     padding: 20px;
@@ -81,7 +86,7 @@ footer {
     justify-content: space-evenly;
     background-color: #d7d7d7;
     padding: 20px;
-    color: #ffffff;
+    color: #070707;
 }
 
 footer section {
@@ -98,13 +103,13 @@ footer section ul {
 
 footer section h2 {
     display: inline-block;
-    color: #ffffff;
+    color: #000000;
     font-weight: bold;
     margin-bottom: 10px;
 }
 
 footer section ul li a {
-    color: #ffffff;
+    color: #000000;
     text-decoration: none;
     transition: color 0.3s ease;
 }
