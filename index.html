@@ -9,7 +9,7 @@
   <style>
     canvas {
       max-width: 100%;
-      height: 300px; /* Höhe des Diagramms angepasst */
+      height: 300px; /* Height of the chart adjusted */
     }
   </style>
 </head>
@@ -22,20 +22,15 @@
 <h2>Ordner für ESL Dateien hochladen</h2>
 <input type="file" id="eslFolder" webkitdirectory multiple accept=".xml">
 
-<h2>Zeitraum für Zeitstempel eingeben</h2>
-<label for="startTime">Startzeit:</label>
-<input type="number" id="startTime" placeholder="Start Zeitstempel">
-<label for="endTime">Endzeit:</label>
-<input type="number" id="endTime" placeholder="End Zeitstempel">
+<h2>Start- und Endzeitraum</h2>
+<input type="number" id="startTime" placeholder="Startzeit">
+<input type="number" id="endTime" placeholder="Endzeit">
 
 <button id="processData">Daten verarbeiten</button>
+<button id="exportCSV">Exportieren als CSV</button>
+<button id="exportJSON">Exportieren als JSON</button>
 
-<h2>Diagramm</h2>
 <canvas id="meteringChart"></canvas>
-
-<h2>Exportieren</h2>
-<button id="exportCSV">Exportiere als CSV</button>
-<button id="exportJSON">Exportiere als JSON</button>
 
 <script src="script.js"></script>
 </body>
