@@ -62,8 +62,6 @@ document.getElementById('processData').addEventListener('click', function () {
                             // Accumulate volumes for the same date
                             if (!(dateOnly in volumeByStartTime)) {
                                 volumeByStartTime[dateOnly] = fileVolume;
-                            } else {
-                                volumeByStartTime[dateOnly] += fileVolume; // Accumulate if already exists
                             }
                         }
                     }
@@ -195,4 +193,74 @@ document.getElementById('processData').addEventListener('click', function () {
             eslFilesProcessed++;
         }
     }
+
+    document.getElementById('exportCSV').addEventListener('click', function () {
+        exportToCSV(effectiveMeterReadings);
+    });
+
+
+    function exportToCSV(data) {
+        let csvContent = "timestamp;value\n";
+
+        Object.keys(data).forEach(date => {
+            const timestamp = new Date(date).getTime() / 1000;
+            const value = data[date];
+            csvContent += `${timestamp};${value}\n`
+        });
+
+        const blob = new Blob([csvContent], {type: 'text/csv'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'effective_meter_readings.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    /*document.getElementById('exportJSON').addEventListener('click', function () {
+        exportToJSON(effectiveMeterReadings, volumeByStartTime);
+    });
+
+    function exportToJSON(effectiveMeterReadings, volumeByStartTime) {
+        // Create JSON structure for multiple sensors
+        const jsonObject = [
+            {
+                "sensorId": "ID742",
+                "data": Object.keys(effectiveMeterReadings).map(date => {
+                    const timestamp = Math.floor(new Date(date).getTime() / 1000); // Convert date to UNIX timestamp in seconds
+                    const value = effectiveMeterReadings[date];
+                    return {
+                        "ts": timestamp.toString(), // Convert timestamp to string
+                        "value": value
+                    };
+                })
+            },
+            {
+                "sensorId": "ID735",
+                "data": Object.keys(volumeByStartTime).map(date => {
+                    const timestamp = Math.floor(new Date(date).getTime() / 1000); // Convert date to UNIX timestamp in seconds
+                    const value = volumeByStartTime[date];
+                    return {
+                        "ts": timestamp.toString(), // Convert timestamp to string
+                        "value": value
+                    };
+                })
+            }
+        ];
+
+        // Convert JSON object to string
+        const jsonString = JSON.stringify(jsonObject, null, 2); // Pretty print with indentation
+
+        // Create a Blob and initiate download
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'effective_meter_readings.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }*/
+
 });
+
+
