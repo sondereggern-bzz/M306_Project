@@ -1,4 +1,5 @@
 document.getElementById('processData').addEventListener('click', function () {
+    const time = document.getElementById('timeRange').value;
     const sdatFolder = document.getElementById('sdatFolder').files;
     const eslFolder = document.getElementById('eslFolder').files;
 
@@ -62,6 +63,8 @@ document.getElementById('processData').addEventListener('click', function () {
                             // Accumulate volumes for the same date
                             if (!(dateOnly in volumeByStartTime)) {
                                 volumeByStartTime[dateOnly] = fileVolume;
+                            } else {
+                                volumeByStartTime[dateOnly] += fileVolume;
                             }
                         }
                     }
@@ -194,73 +197,70 @@ document.getElementById('processData').addEventListener('click', function () {
         }
     }
 
+
+
+    // Export CSV functionality
     document.getElementById('exportCSV').addEventListener('click', function () {
         exportToCSV(effectiveMeterReadings);
     });
 
-
-    function exportToCSV(data) {
-        let csvContent = "timestamp;value\n";
-
-        Object.keys(data).forEach(date => {
-            const timestamp = new Date(date).getTime() / 1000;
-            const value = data[date];
-            csvContent += `${timestamp};${value}\n`
-        });
-
-        const blob = new Blob([csvContent], {type: 'text/csv'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'effective_meter_readings.csv';
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-
-    /*document.getElementById('exportJSON').addEventListener('click', function () {
-        exportToJSON(effectiveMeterReadings, volumeByStartTime);
+    // Add event listener for the createDiagram button
+    document.getElementById('createDiagram').addEventListener('click', function () {
+        const time = document.getElementById('timeRange').value;
+        createDiagram(eslResults, time);
     });
 
-    function exportToJSON(effectiveMeterReadings, volumeByStartTime) {
-        // Create JSON structure for multiple sensors
-        const jsonObject = [
-            {
-                "sensorId": "ID742",
-                "data": Object.keys(effectiveMeterReadings).map(date => {
-                    const timestamp = Math.floor(new Date(date).getTime() / 1000); // Convert date to UNIX timestamp in seconds
-                    const value = effectiveMeterReadings[date];
-                    return {
-                        "ts": timestamp.toString(), // Convert timestamp to string
-                        "value": value
-                    };
-                })
-            },
-            {
-                "sensorId": "ID735",
-                "data": Object.keys(volumeByStartTime).map(date => {
-                    const timestamp = Math.floor(new Date(date).getTime() / 1000); // Convert date to UNIX timestamp in seconds
-                    const value = volumeByStartTime[date];
-                    return {
-                        "ts": timestamp.toString(), // Convert timestamp to string
-                        "value": value
-                    };
-                })
-            }
-        ];
+    function createDiagram(datas, time) {
+        const labels = Object.keys(datas);
+        const data = {
+            labels: labels,
+            datasets: [{
+                label: `Zählerstand nach ${time}n`, // Use the selected time for the label
+                data: Object.values(datas),
+                fill: false,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        };
 
-        // Convert JSON object to string
-        const jsonString = JSON.stringify(jsonObject, null, 2); // Pretty print with indentation
+        const ctx = document.getElementById('meteringChart').getContext('2d');
 
-        // Create a Blob and initiate download
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'effective_meter_readings.json';
-        a.click();
-        URL.revokeObjectURL(url);
-    }*/
+        // Destroy existing chart if it exists
+        if (typeof window.chart !== 'undefined') {
+            window.chart.destroy();
+        }
 
+        window.chart = new Chart(ctx, {
+            type: 'line',
+            data: data
+        });
+    }
+
+
+
+    // Function to export data to CSV
+    function exportToCSV(data) {
+        const rows = [['timestamp','value']];
+
+        Object.keys(data).forEach(timestamp => {
+            rows.push([new Date(timestamp).getTime(), data[timestamp]]);
+        });
+
+        let csvContent = 'data:text/csv;charset=utf-8,';
+        rows.forEach(row => {
+            csvContent += row.join(',') + '\n';
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', 'meter_readings.csv');
+        document.body.appendChild(link);
+
+        link.click();
+    }
 });
 
 
+//npm install chartjs-adapter-date-fns
+//npm install chartjs-adapter-moment

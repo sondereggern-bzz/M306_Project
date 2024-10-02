@@ -22,18 +22,25 @@
 <h2>Ordner für ESL Dateien hochladen</h2>
 <input type="file" id="eslFolder" webkitdirectory multiple accept=".xml">
 
-<br>
-<br>
+<br><br>
+
+<h2>Wähle eine Zeitspanne</h2>
+<select id="timeRange">
+  <option value="Tage (langsamste Verarbeitung)">Tage</option>
+  <option value="Woche (M Verarbeitung)">Wochen</option>
+  <option value="Monate">Monate</option>
+</select>
 
 <button id="processData">Daten verarbeiten</button>
+<button id="createDiagram">Diagramm erstellen</button>
 
 <h2>Diagramm</h2>
-<canvas id="meteringChart"></canvas>
+<canvas id="meteringChart"></canvas> <!-- Keep the ID the same as in the JavaScript -->
 
 <h2>Exportieren</h2>
 <button id="exportCSV">Exportiere als CSV</button>
 <button id="exportJSON">Exportiere als JSON</button>
 
-<script src="app.js"></script>
+<script src="app.js"></script> <!-- Link to your JavaScript file -->
 </body>
 </html>
