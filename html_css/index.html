@@ -15,9 +15,12 @@
 </header>
 
 <div class="content">
+  <div class='headline'>
   <h1>Strombezug/-Einspeisung</h1>
+  </div>
   <p>
-    Der Verbrauch und die Einspeisung von Strom hat auf der ganzen Welt eine wichtige Rolle in der Wirtschaft. Wir freuen uns, dass sie unsere Dienste verwenden, um diese Daten auszulesen. Sie sehen ein Liniendiagramm mit der möglichkeit die Skalierung zu verändern. Die möglichen Zeitachsen sind: Tage, Wochen, Monate, Jahre.  </p>
+    Willkommen bei der Energieagentur Bünzli! Wir freuen uns, Ihnen dabei zu helfen, Ihre Energie effizient zu nutzen
+    Der Verbrauch und die Einspeisung von Strom hat auf der ganzen Welt eine wichtige Rolle in der Wirtschaft. Mit unseren Diensten können Sie die Daten für Energiebezug und Energieeinspeisung sehen. Sie sehen ein Liniendiagramm mit der möglichkeit die Skalierung zu verändern. Die möglichen Zeitachsen sind: Tage, Wochen, Monate, Jahre.  </p>
 
   <div class="container">
     <div class="box">
@@ -34,17 +37,28 @@
   </select>
 
   <h2>Upload</h2>
-  <div class="file-upload">
-    <label for="fileInput">Dateien wählen</label>
-    <input type="file" id="fileInput" multiple>
-    <p>Bitte hier gewünschte Datei auswählen.</p>
+  <div class="upload-container">
+    <div class="file-upload">
+      <label for="sdatinput">sDat Dateien</label>
+      <input type="file" id="sdatinput" webkitdirectory multiple>
+      <p>Bitte hier gewünschte Datei auswählen.</p>
+    </div>
+
+    <div class="file-upload">
+      <label for="eslinput">esl Dateien</label>
+      <input type="file" id="eslinput" webkitdirectory multiple>
+      <p>Bitte hier gewünschte Datei auswählen.</p>
+    </div>
   </div>
-  <button type=reset id='sendButton'>Send</button>
-</div>
+    <div class='upload-button-container'>
+      <button id='submit_button' type='submit'>Daten verarbeiten</button>
+    </div>
+  <br><br>
 <script>
     // Test für den Dateiinhalt bei input
-    document.getElementById('sendButton').addEventListener('click', function() {
-        const files = document.getElementById('fileInput').files;
+    document.getElementById('submit_button').addEventListener('click', function() {
+        console.log("Neger")
+        const files = document.getElementById('eslinput').files;
         const file_array = Array.from(files);
         file_array.forEach(file => {
             console.log('Dateiname:', file.name);
@@ -69,12 +83,12 @@
     <h2>Dateien exportieren</h2>
     <label for="exportFormat">Data Format</label>
     <select id="exportFormat">
-      <option value="">Format auswählen</option>
-      <option value="csv">CSV</option>
+      <option value="csv" selected>CSV</option>
       <option value="json">JSON</option>
     </select>
     <button>Export</button>
   </div>
+</div>
 </div>
 </body>
 <footer>

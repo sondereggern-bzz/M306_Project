@@ -75,10 +75,33 @@ select, input[type="file"], button {
 }
 
 .file-upload {
-    border: 2px dashed #ccc;
-    padding: 40px;
-    text-align: center;
-    margin: 20px 0;
+    border: 1px dashed black;
+    padding: 20px;
+    flex: 1;
+    box-sizing: border-box;
+}
+.upload-container {
+    display: flex;
+    gap: 40px;
+}
+label, input, p {
+    display: block;
+    margin-bottom: 10px;
+}
+.upload-button-container {
+    display: flex;
+    justify-content: center;
+}
+#submit_button {
+    width: 100%;
+    font-size: 16px;
+    background-color: #c9c9c9;
+    color: #070707;
+    cursor: pointer;
+    box-sizing: border-box;
+    display: flex;
+
+
 }
 
 footer {
