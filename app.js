@@ -199,43 +199,51 @@ document.getElementById('processData').addEventListener('click', function () {
                     console.log('735: ', sortedEinspeisungResults);
 
 
-                    const reversedEslResults = Object.keys(sortedEslResults)
-                        .reverse() // Reverse the array of keys
-                        .reduce((acc, key) => {
-                            acc[key] = sortedEslResults[key]; // Rebuild the object with reversed keys
-                            return acc;
-                        }, {});
 
-                    console.log(`reversed esl: ${reversedEslResults}`);
+
                     // Initialize cumulative consumption
-                    Object.keys(reversedEslResults).forEach(date => {
-                        const eslValue = reversedEslResults[date];
-
+                    Object.keys(sortedEslResults).forEach(date => {
+                        const eslValue = sortedEslResults[date];
 
                         // Initialize cumulative consumption for the current ESL date
                         let cumulativeConsumption = 0;
 
+                        let timestamp = date - 86400; // Go back one day to start subtracting
+
                         // Subtract previous days' SDAT data from the ESL value
-                        effectiveMeterReadings[date] = eslValue
-                        date -= 86400 // Go back one day to start subtracting
+                        effectiveMeterReadings[date] = eslValue; // Store ESL value for today
+
+                        // Check if the previous day's timestamp is already in effective meter readings
+                        if (sortedEslResults.hasOwnProperty(timestamp)) {
+                            console.log('timestamp: ', timestamp, 'already in effective meter');
+                        }
 
                         // Iterate backward through the days until we have no more SDAT data
                         while (true) {
                             const dailyVolume = sdatResults742[timestamp];
-                            if (!effectiveMeterReadings.hasOwnProperty(timestamp)) {
+
+                            // Only accumulate if dailyVolume is defined
+                            if (dailyVolume) {
                                 cumulativeConsumption += dailyVolume; // Accumulate consumption
+                            }
+
+                            // Calculate effective reading if timestamp is not already in effectiveMeterReadings
+                            if (!effectiveMeterReadings.hasOwnProperty(timestamp)) {
                                 effectiveMeterReadings[timestamp] = eslValue - cumulativeConsumption; // Calculate effective reading
                             }
+
                             // Stop if we've gone past the beginning of the available SDAT data
-                            if (!sdatFolder.hasOwnProperty(timestamp) || sortedEslResults.hasOwnProperty(timestamp)) {
+                            if (!sdatResults742.hasOwnProperty(timestamp) || sortedEslResults.hasOwnProperty(timestamp)) {
                                 break; // Exit if there's no volume data for this date
                             }
 
-                            timestamp -= 86400 // Move to the previous day
+                            // Move to the previous day
+                            timestamp -= 86400;
                         }
                     });
 
-                     //Now handle SDAT dates that are greater than the last ESL date
+
+                    //Now handle SDAT dates that are greater than the last ESL date
                     /*const lastEslDate = new Date(Object.keys(sortedEslResults).pop());
                     let lastEffectiveValue = Object.values(sortedEslResults).pop(); // Get last ESL value
 
@@ -247,7 +255,7 @@ document.getElementById('processData').addEventListener('click', function () {
                         }
                     });*/
 
-                    console.log('Effective Meter Readings:', effectiveMeterReadings);
+                    console.log('Effective Meter Readings 742:', effectiveMeterReadings);
                 }
             };
 
@@ -261,17 +269,29 @@ document.getElementById('processData').addEventListener('click', function () {
 
     // Export CSV functionality
     document.getElementById('exportCSV').addEventListener('click', function () {
-        exportToCSV(sdatResults742, sdatResults735);
+        exportToCSV(effectiveMeterReadings, sdatResults735);
     });
 
     time = document.getElementById('timeRange').value;
     // Add event listener for the createDiagram button
     document.getElementById('createDiagram').addEventListener('click', function () {
-        createDiagram(sortedEslResults, );
+        createDiagram(effectiveMeterReadings, 'ZEIT');
     });
 
+    function formatDate(timestamp) {
+        let date = new Date(timestamp * 1000); // Convert seconds to milliseconds
+        const day = String(date.getUTCDate()).padStart(2, '0'); // Pad single digits with a leading zero
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0'); // Months are 0-indexed, so add 1
+        const year = date.getUTCFullYear(); // Get full year
+        return `${day}-${month}-${year}`;
+    }
+
     function createDiagram(dates, time) {
-        const labels = Object.keys(dates);
+        let labels = Object.keys(dates); // Get keys (timestamps) from dates
+
+        // Format each label using the formatDate function
+        labels = labels.map(timestamp => formatDate(timestamp)); // Apply formatDate to each label
+
         const data = {
             labels: labels,
             datasets: [{
@@ -290,11 +310,13 @@ document.getElementById('processData').addEventListener('click', function () {
             window.chart.destroy();
         }
 
+        // Create a new chart
         window.chart = new Chart(ctx, {
             type: 'line',
             data: data
         });
     }
+
 
 // Function to adjust the timestamp
     function adjustTimestamp(originalTimestamp) {
@@ -310,7 +332,6 @@ document.getElementById('processData').addEventListener('click', function () {
         // Convert back to a timestamp (in seconds)
         return Math.floor(date.getTime() / 1000); // Convert back to seconds
     }
-
 
 
 
