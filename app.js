@@ -49,10 +49,9 @@ document.getElementById('processData').addEventListener('click', function () {
 
                     const timeSlotsPerDay = 96; // Number of sequences per day
                     const days = Math.floor(totalSequences / timeSlotsPerDay); // Calculate number of complete days
-                    let fileVolume = 0;
 
                     for (let x = 0; x < days; x++) {
-                        //let fileVolume = 0;
+                        let fileVolume = 0;
 
                         // Sum up the 96 sequences for each day
                         for (let y = 0; y < timeSlotsPerDay; y++) {
@@ -182,55 +181,43 @@ document.getElementById('processData').addEventListener('click', function () {
                     console.log('742: ', sortedEslResults);
                     //console.log('735: ', sortedEinspeisungResults);
 
-
                     window.meter742 = calculateEffectiveMeterReadings(eslResults, sdatResults742, effectiveMeterReadings742);
                     //window.meter735 = calculateEffectiveMeterReadings(eslEinspeisung, sdatResults735, effectiveMeterReadings735);
 
                     // Compute effective meter readings
                     function calculateEffectiveMeterReadings(esl, sdat, dict) {
-                        Object.keys(esl).forEach(dateStr => {
-                            const date = parseInt(dateStr); // Convert date string to an integer
-                            const eslValue = esl[date];
-                            let cumulativeConsumption = 0;
-                            let timestamp = date - 86400; // Start from the next day (86400 seconds)
+                        const lastDate = Math.max(...Object.keys(esl).map(Number)); // Get the latest date
+                        dict[lastDate] = esl[lastDate]; // Initialize with the latest ESL reading
+                        let newDate = lastDate - 86400; // Start from one day back
 
-                            // Set the initial value in effectiveMeterReadings to the current eslValue
-                            dict[date] = eslValue;
+                        while (newDate >= 0) { // Loop until newDate is valid
 
-                            // Continue to iterate backward in time
-                            while (true) {
-                                const dailyVolume = sdat[timestamp];
+                            if (isNaN(sdat[newDate])) { // Skip if sdat doesn't have a value for newDate
 
-                                // Add daily volume to cumulative consumption if it exists
-                                if (dailyVolume) {
-                                    cumulativeConsumption += dailyVolume;
-                                }
-
-                                // Calculate the date one month ahead
-                                const nextDate = new Date(timestamp * 1000); // Convert to milliseconds
-                                nextDate.setMonth(nextDate.getMonth() + 1); // Add one month
-                                const nextTimestamp = Math.floor(nextDate.getTime() / 1000); // Convert back to seconds
-
-                                // Check if dailyVolume is greater than or equal to the ESL value one month ahead
-                                if (dailyVolume && dailyVolume >= esl[nextTimestamp]) {
-                                    break; // Exit the loop if the condition is met
-                                }
-
-                                // Calculate the new value
-                                dict[timestamp] = eslValue - cumulativeConsumption;
-
-                                // Stop if timestamp doesn't exist in sdat or if timestamp already exists in esl
-                                if (!sdat.hasOwnProperty(timestamp) || esl.hasOwnProperty(timestamp)) {
-                                    break;
-                                }
-
-                                // Move back one day (86400 seconds)
-                                timestamp -= 86400; // Go to the previous day
+                                newDate -= 86400; // Move to the previous day
+                                continue; // Skip to next iteration
                             }
-                        });
+
+                            if (dict[newDate + 86400] !== undefined) {
+
+                                if ((dict[newDate + 86400] - sdat[newDate]) > 0) { // Check if positive
+                                    dict[newDate] = dict[newDate + 86400] - sdat[newDate]; // Calculate effective meter reading
+
+                                } else {
+
+                                    break; // Exit the loop if the condition is not satisfied
+                                }
+                            } else {
+                                console.log(`No entry in dict for ${newDate + 86400}`); // Debugging: missing entry
+                                continue;
+                            }
+
+                            newDate -= 86400; // Move to the previous day
+                        }
 
                         return dict; // Return the updated dictionary
                     }
+
 
 
 
