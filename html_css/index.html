@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Anwendung - Energieagentur Bünzli</title>
   <link rel='stylesheet' href='style.css'>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1"></script>
 </head>
 <body>
 <header>
@@ -32,36 +34,36 @@
   <h2> Diagramm</h2>
   <div class="container">
     <div class="box">
-      <span>Diagramm</span>
       <canvas id="meteringChart"></canvas> <!-- Keep the ID the same as in the JavaScript -->
     </div>
   </div>
 
   <h2>Benutzerspezifische Abfrage anhand verschiedener Skalierungen</h2>
-  <label for="diagramFilter">Skalierung</label>
-  <select id="diagramFilter">
-    <option value="1">Tage</option>
+  <label for="timeRange">Skalierung</label>
+  <select id="timeRange">
+    <option value="1" selected >Tage</option>
     <option value="2">Wochen</option>
     <option value="3">Monate</option>
-    <option value="4" selected>Jahre</option>
+    <option value="4" >Jahre</option>
   </select>
 
   <h2>Upload</h2>
   <div class="upload-container">
     <div class="file-upload">
-      <label for="sdatinput">sDat Dateien</label>
-      <input type="file" id="sdatinput" webkitdirectory multiple>
+      <label for="sdatfolder">sDat Dateien</label>
+      <input type="file" id="sdatFolder" webkitdirectory multiple accept=".xml">
       <p>Bitte hier gewünschte Datei auswählen.</p>
     </div>
 
     <div class="file-upload">
-      <label for="eslinput">ESL Dateien</label>
-      <input type="file" id="eslinput" webkitdirectory multiple>
+      <label for="eslFolder">ESL Dateien</label>
+      <input type="file" id="eslFolder" webkitdirectory multiple accept=".xml">
       <p>Bitte hier gewünschte Datei auswählen.</p>
     </div>
   </div>
     <div class='upload-button-container'>
-      <button id='submit_button' type='submit'>Daten verarbeiten</button>
+      <button id="processData">Daten verarbeiten</button>
+      <button id="createDiagram">Diagramm erstellen</button>
     </div>
   <br><br>
 <script>
@@ -89,18 +91,12 @@
 
 
 <div id="exportModal">
-  <div style="background-color: white; padding: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); max-width: 400px; margin: auto;">
-    <h2>Dateien exportieren</h2>
-    <label for="exportFormat">Data Format</label>
-    <select id="exportFormat">
-      <option value="csv" selected>CSV</option>
-      <option value="json">JSON</option>
-    </select>
-    <button>Export</button>
+  <button id="exportCSV">Exportiere als CSV</button>
   </div>
 </div>
 </div>
 </body>
+<script src="app.js"></script>
 <footer>
   <section>
     <ul>
