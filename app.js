@@ -49,9 +49,10 @@ document.getElementById('processData').addEventListener('click', function () {
 
                     const timeSlotsPerDay = 96; // Number of sequences per day
                     const days = Math.floor(totalSequences / timeSlotsPerDay); // Calculate number of complete days
+                    let fileVolume = 0;
 
                     for (let x = 0; x < days; x++) {
-                        let fileVolume = 0;
+                        //let fileVolume = 0;
 
                         // Sum up the 96 sequences for each day
                         for (let y = 0; y < timeSlotsPerDay; y++) {
@@ -81,7 +82,7 @@ document.getElementById('processData').addEventListener('click', function () {
                         }
 
                         // Increment to the next day
-                        startTime += 86400; // 86400 seconds = 1 day
+                        startTime += 3600; // 86400 seconds = 1 day
                     }
                 }
 
@@ -89,7 +90,7 @@ document.getElementById('processData').addEventListener('click', function () {
 
                 // Log the results once all SDAT files are processed
                 if (sdatFilesProcessed === sdatFolder.length) {
-                    console.log('SDAT Results ID742:', sdatResults742);;
+                    console.log('SDAT Results ID742:', sdatResults742);
                     //console.log('SDAT Results ID735:', sdatResults735);
                 }
             };
@@ -183,7 +184,7 @@ document.getElementById('processData').addEventListener('click', function () {
 
 
                     window.meter742 = calculateEffectiveMeterReadings(eslResults, sdatResults742, effectiveMeterReadings742);
-                    window.meter735 = calculateEffectiveMeterReadings(eslEinspeisung, sdatResults735, effectiveMeterReadings735);
+                    //window.meter735 = calculateEffectiveMeterReadings(eslEinspeisung, sdatResults735, effectiveMeterReadings735);
 
                     // Compute effective meter readings
                     function calculateEffectiveMeterReadings(esl, sdat, dict) {
@@ -191,7 +192,7 @@ document.getElementById('processData').addEventListener('click', function () {
                             const date = parseInt(dateStr); // Convert date string to an integer
                             const eslValue = esl[date];
                             let cumulativeConsumption = 0;
-                            let timestamp = date - 86400; // Go back one day (86400 seconds)
+                            let timestamp = date - 86400; // Start from the next day (86400 seconds)
 
                             // Set the initial value in effectiveMeterReadings to the current eslValue
                             dict[date] = eslValue;
@@ -205,11 +206,18 @@ document.getElementById('processData').addEventListener('click', function () {
                                     cumulativeConsumption += dailyVolume;
                                 }
 
-                                // Calculate the new value
-                                const newValue = eslValue - cumulativeConsumption;
+                                // Calculate the date one month ahead
+                                const nextDate = new Date(timestamp * 1000); // Convert to milliseconds
+                                nextDate.setMonth(nextDate.getMonth() + 1); // Add one month
+                                const nextTimestamp = Math.floor(nextDate.getTime() / 1000); // Convert back to seconds
 
-                                // Update the dictionary only if the new value is non-negative
-                                dict[timestamp] = newValue;
+                                // Check if dailyVolume is greater than or equal to the ESL value one month ahead
+                                if (dailyVolume && dailyVolume >= esl[nextTimestamp]) {
+                                    break; // Exit the loop if the condition is met
+                                }
+
+                                // Calculate the new value
+                                dict[timestamp] = eslValue - cumulativeConsumption;
 
                                 // Stop if timestamp doesn't exist in sdat or if timestamp already exists in esl
                                 if (!sdat.hasOwnProperty(timestamp) || esl.hasOwnProperty(timestamp)) {
@@ -217,32 +225,18 @@ document.getElementById('processData').addEventListener('click', function () {
                                 }
 
                                 // Move back one day (86400 seconds)
-                                timestamp -= 86400;
+                                timestamp -= 86400; // Go to the previous day
                             }
-                            return dict
                         });
 
-
-
-                        // Step 1: Convert dict to an array of entries and sort it by value
-                        const sortedEntries = Object.entries(dict).sort(([, valueA], [, valueB]) => valueA - valueB);
-
-                        // Step 2: Filter out entries with values less than 0
-                        const filteredEntries = sortedEntries.filter(([, value]) => value >= 0);
-
-                        // Step 3: Reconstruct the dictionary from the filtered entries
-                        dict = Object.fromEntries(filteredEntries);
-
-                        return dict;
+                        return dict; // Return the updated dictionary
                     }
 
 
 
 
-
-
                     console.log('Effective Meter Readings 742:', meter742);
-                    console.log('Effective Meter Readings 735:', meter735);
+                    //console.log('Effective Meter Readings 735:', meter735);
                 }
             };
 
@@ -259,7 +253,7 @@ document.getElementById('processData').addEventListener('click', function () {
 
     // Export CSV functionality
     document.getElementById('exportCSV').addEventListener('click', function () {
-        exportToCSV(effectiveMeterReadings742, sdatResults735);
+        exportToCSV(meter742, sdatResults735);
     });
 
     time = document.getElementById('timeRange').value;
@@ -267,7 +261,7 @@ document.getElementById('processData').addEventListener('click', function () {
 
 
     document.getElementById('createDiagram').addEventListener('click', function () {
-        createDiagram(meter735, 'ZEIT');
+        createDiagram(meter742, 'ZEIT');
 
     });
 
@@ -310,18 +304,6 @@ document.getElementById('processData').addEventListener('click', function () {
         });
     }
 
-    function sortAndFilterDict(inputDict) {
-        // Sort the dictionary entries by value in descending order
-        const sortedEntries = Object.entries(inputDict).sort(([, valueA], [, valueB]) => valueB - valueA);
-
-        // Filter out entries with values less than 0
-        return sortedEntries.reduce((acc, [key, value]) => {
-            if (value >= 0) {
-                acc[key] = value; // Add entry to accumulator if value is >= 0
-            }
-            return acc;
-        }, {});
-    }
 
 
 // Function to adjust the timestamp
