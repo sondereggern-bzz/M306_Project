@@ -156,9 +156,14 @@ document.getElementById('processData').addEventListener('click', function () {
                         return obj;
                     }, {});
 
-                    console.log('742: ', sortedEslResults);
+                    //console.log('742: ', sortedEslResults);
 
                     window.meter742 = calculateEffectiveMeterReadings(eslResults, sdatResults742, effectiveMeterReadings742);
+                    window.meter735 = calculateEffectiveMeterReadings(eslEinspeisung, sdatResults735, effectiveMeterReadings735);
+
+                    console.log(eslResults)
+                    console.log(eslEinspeisung);
+
 
                     function calculateEffectiveMeterReadings(esl, sdat, dict) {
                         const lastDate = Math.max(...Object.keys(esl).map(Number));
@@ -191,24 +196,35 @@ document.getElementById('processData').addEventListener('click', function () {
 
     document.getElementById('createDiagram').addEventListener('click', function () {
         let timeRange = document.getElementById('timeRange').value;
-        let filteredData;
+        const filteredData742 = filterMeterData(timeRange, meter742)
+        const filteredData735 = filterMeterData(timeRange, meter735)
 
+
+        createDiagram(filteredData742, filteredData735, timeRange)
+
+
+    });
+
+
+    function filterMeterData(timeRange, meterData) {
+        let filteredData;
         switch (timeRange) {
             case 'Tagen':
-                filteredData = meter742;
+                filteredData = meterData; // Return the daily data
                 break;
             case 'Wochen':
-                filteredData = aggregateWeekly(meter742);
+                filteredData = aggregateWeekly(meterData); // Aggregate data weekly
                 break;
             case 'Monaten':
-                filteredData = aggregateMonthly(meter742);
+                filteredData = aggregateMonthly(meterData); // Aggregate data monthly
                 break;
             default:
-                filteredData = meter742;
+                filteredData = meterData; // Default to daily data
         }
 
-        createDiagram(filteredData, timeRange);
-    });
+        return filteredData;
+    }
+
 
     function aggregateWeekly(data) {
         const weeklyData = {};
@@ -274,18 +290,29 @@ document.getElementById('processData').addEventListener('click', function () {
         return Math.ceil((numberOfDays + oneJan.getUTCDay() + 1) / 7);
     }
 
-    function createDiagram(dates, time) {
-        let labels = Object.keys(dates).map(timestamp => formatDate(timestamp));
+    function createDiagram(data742, data735, time) {
+        const labels = Object.keys(data742).map(timestamp => formatDate(timestamp));
+        const dataset742 = Object.values(data742);
+        const dataset735 = Object.values(data735);
 
-        const data = {
+        const chartData = {
             labels: labels,
-            datasets: [{
-                label: `Zählerstand nach ${time}`,
-                data: Object.values(dates),
-                fill: false,
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
-            }]
+            datasets: [
+                {
+                    label: 'ID742 Meter Readings',
+                    data: dataset742,
+                    fill: false,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                },
+                {
+                    label: 'ID735 Meter Readings',
+                    data: dataset735,
+                    fill: false,
+                    borderColor: 'rgb(255, 99, 132)',
+                    tension: 0.1
+                }
+            ]
         };
 
         const ctx = document.getElementById('meteringChart').getContext('2d');
@@ -297,7 +324,7 @@ document.getElementById('processData').addEventListener('click', function () {
         // Creating the chart with zoom and pan options
         window.chart = new Chart(ctx, {
             type: 'line',
-            data: data,
+            data: chartData,
             options: {
                 responsive: true,
                 scales: {
