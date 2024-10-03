@@ -3,6 +3,7 @@ document.getElementById('processData').addEventListener('click', function () {
     const eslFolder = document.getElementById('eslFolder').files;
     let time = document.getElementById('timeRange').value;
     let sortedEslResults = {}
+    let sortedEinspeisungResults = {}
     const sortedVolumeByStartTime = {};
     time = parseInt(time)
 
@@ -118,57 +119,79 @@ document.getElementById('processData').addEventListener('click', function () {
                 }).filter(date => date !== null);
 
                 const valueRows = Array.from(xmlDoc.getElementsByTagName('ValueRow'));
-                let value1 = null, value2 = null, value3 = null, value4 = null; // Set to null to find only the first matching value
+
+                // Initialize variables to store values
+                let value1 = null, value2 = null; // For Bezug
+                let value3 = null, value4 = null; // For Einspeisung
 
                 for (const row of valueRows) {
                     const obisCode = row.getAttribute('obis');
                     const value = parseFloat(row.getAttribute('value'));
 
+                    // Check for Bezug values
                     if (value1 === null && obisCode === '1-1:1.8.1' && !isNaN(value)) {
-                        value1 = value; // Take only the first matching value for '1-1:1.8.1'
+                        value1 = value; // First matching value for '1-1:1.8.1'
                     }
                     if (value2 === null && obisCode === '1-1:1.8.2' && !isNaN(value)) {
-                        value2 = value; // Take only the first matching value for '1-1:1.8.2'
+                        value2 = value; // First matching value for '1-1:1.8.2'
                     }
 
+                    // Check for Einspeisung values
                     if (value3 === null && obisCode === '1-1:2.8.1' && !isNaN(value)) {
-                        value3 = value; // Take only the first matching value for '1-1:1.8.1'
+                        value3 = value; // First matching value for '1-1:2.8.1'
                     }
                     if (value4 === null && obisCode === '1-1:2.8.2' && !isNaN(value)) {
-                        value4 = value; // Take only the first matching value for '1-1:1.8.2'
+                        value4 = value; // First matching value for '1-1:2.8.2'
                     }
 
-
-                    // Stop iterating if both values are found
+                    // Stop iterating if all values are found
                     if (value1 !== null && value2 !== null && value3 !== null && value4 !== null) {
                         break;
                     }
                 }
 
-                if (value1 !== null && value2 !== null && value3 !== null && value4 !== null) {
-                    const totalValue = value1 + value2;
-                    const totalValue2 = value3 + value4
+                // Check if all values for Bezug and Einspeisung were found
+                if (value1 !== null && value2 !== null) {
+                    const totalValue = value1 + value2; // Sum of Bezug values
 
                     // Store the sum of the values by end date
                     endDates.forEach(endDate => {
                         if (!(endDate in eslResults)) {
-                            eslResults[endDate] = totalValue;
-                        }
-                        if (!(endDate in eslEinspeisung)) {
-                            eslEinspeisung[endDate] = totalValue2;
+                            eslResults[endDate] = totalValue; // Store in eslResults
                         }
                     });
                 }
+
+                if (value3 !== null && value4 !== null) {
+                    const totalValue2 = value3 + value4; // Sum of Einspeisung values
+
+                    // Store the sum of the values by end date
+                    endDates.forEach(endDate => {
+                        if (!(endDate in eslEinspeisung)) {
+                            eslEinspeisung[endDate] = totalValue2; // Store in eslEinspeisung
+                        }
+                    });
+                }
+
 
                 eslFilesProcessed++;
 
                 // Log the results once all ESL files are processed
                 if (eslFilesProcessed === eslFolder.length) {
-                        sortedEslResults = Object.keys(eslResults).sort().reduce((obj, key) => {
+                    // Sort and reduce for Bezug (ID742)
+                    sortedEslResults = Object.keys(eslResults).sort().reduce((obj, key) => {
                         obj[key] = eslResults[key];
                         return obj;
                     }, {});
-                    console.log('ESL Results by End Date:', sortedEslResults);
+
+                    // Sort and reduce for Einspeisung (ID735)
+                    sortedEinspeisungResults = Object.keys(eslEinspeisung).sort().reduce((obj, key) => {
+                        obj[key] = eslEinspeisung[key];
+                        return obj;
+                    }, {});
+
+                    console.log('742: ', sortedEslResults);
+                    console.log('735: ', sortedEinspeisungResults);
 
 
                     const reversedEslResults = Object.keys(sortedEslResults)
@@ -193,7 +216,6 @@ document.getElementById('processData').addEventListener('click', function () {
                         // Iterate backward through the days until we have no more SDAT data
                         while (true) {
                             const dailyVolume = volumeByStartTime[timestamp];
-                            console.log(dailyVolume)
                             if (!effectiveMeterReadings.hasOwnProperty(timestamp)) {
                                 cumulativeConsumption += dailyVolume; // Accumulate consumption
                                 effectiveMeterReadings[timestamp] = eslValue - cumulativeConsumption; // Calculate effective reading
@@ -219,7 +241,7 @@ document.getElementById('processData').addEventListener('click', function () {
                         }
                     });*/
 
-                    console.log('Effective Meter Readings:', effectiveMeterReadings);
+                    console.log('Effective Meter Readings:', Object.keys(effectiveMeterReadings).length);
                 }
             };
 
