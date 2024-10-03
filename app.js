@@ -2,10 +2,10 @@ document.getElementById('processData').addEventListener('click', function () {
     const sdatFolder = document.getElementById('sdatFolder').files;
     const eslFolder = document.getElementById('eslFolder').files;
     let time = document.getElementById('timeRange').value;
-    let sortedEslResults = {}
-    let sortedEinspeisungResults = {}
+    let sortedEslResults = {};
+    let sortedEinspeisungResults = {};
     const sortedVolumeByStartTime = {};
-    time = parseInt(time)
+    time = parseInt(time);
 
     // Check if no files are selected
     if (sdatFolder.length === 0) {
@@ -23,7 +23,9 @@ document.getElementById('processData').addEventListener('click', function () {
     const volumeByStartTime = {}; // To store volume data by date
     const eslResults = {}; // To store ESL results by end date
     const effectiveMeterReadings = {}; // To store effective meter readings
-    const eslEinspeisung = {}
+    const eslEinspeisung = {};
+    const sdatResults742 = {}; // Dictionary for SDAT ID742
+    const sdatResults735 = {}; // Dictionary for SDAT ID735
 
     // Processing SDAT files
     for (let i = 0; i < sdatFolder.length; i++) {
@@ -40,42 +42,46 @@ document.getElementById('processData').addEventListener('click', function () {
                 const startDateTime = xmlDoc.getElementsByTagName('rsm:StartDateTime')[0]?.textContent;
                 const documentID = xmlDoc.getElementsByTagName('rsm:DocumentID')[0]?.textContent;
 
-                if (documentID && documentID.includes('ID742')) {
-                    if (startDateTime) {
-                        let startTime = new Date(startDateTime).getTime() / 1000;
+                if (startDateTime) {
+                    let startTime = new Date(startDateTime).getTime() / 1000;
+                    startTime = adjustTimestamp(startTime)
+                    const totalSequences = xmlDoc.getElementsByTagName('rsm:Sequence').length;
 
-                        const totalSequences = xmlDoc.getElementsByTagName('rsm:Sequence').length;
-
-                        //let time = document.getElementById('timeRange').value;
-                        //time = parseInt(time)
-                        time = 96
-                        const days = Math.floor(totalSequences / time);
-                        for (let x = 0; x < days; x++) {
-                            let fileVolume = 0;
-                            for (let y = 0; y < time; y++) {
-                                const index = x * time + y;
-                                if (index < volumes.length) {
-                                    const volumeValue = parseFloat(volumes[index]?.textContent);
-                                    if (!isNaN(volumeValue)) {
-                                        fileVolume += volumeValue;
-                                    }
-                                } else {
-                                    console.warn(`Index ${index} is out of bounds for volumes array of length ${volumes.length}`);
-                                    break;
+                    time = 96; // Can be adjusted as per requirement
+                    const days = Math.floor(totalSequences / time);
+                    for (let x = 0; x < days; x++) {
+                        let fileVolume = 0;
+                        for (let y = 0; y < time; y++) {
+                            const index = x * time + y;
+                            if (index < volumes.length) {
+                                const volumeValue = parseFloat(volumes[index]?.textContent);
+                                if (!isNaN(volumeValue)) {
+                                    fileVolume += volumeValue;
                                 }
-                            }
-
-                            // Increment date and accumulate daily volume
-                            startTime += 86400
-
-
-                            // Accumulate volumes for the same date
-                            if (!(startTime in volumeByStartTime)) {
-                                volumeByStartTime[startTime] = fileVolume;
                             } else {
-                                volumeByStartTime[startTime] += fileVolume;
+                                console.warn(`Index ${index} is out of bounds for volumes array of length ${volumes.length}`);
+                                break;
                             }
                         }
+
+
+
+                        // Determine which dictionary to store the result in based on Document ID
+                        if (documentID && documentID.includes('ID742')) {
+                            if (!(startTime in sdatResults742)) {
+                                sdatResults742[startTime] = fileVolume;
+                            } else {
+                                sdatResults742[startTime] += fileVolume;
+                            }
+                        } else if (documentID && documentID.includes('ID735')) {
+                            if (!(startTime in sdatResults735)) {
+                                sdatResults735[startTime] = fileVolume;
+                            } else {
+                                sdatResults735[startTime] += fileVolume;
+                            }
+                        }
+                        startTime += 86400 // Increment date and accumulate daily volume
+
                     }
                 }
 
@@ -83,11 +89,8 @@ document.getElementById('processData').addEventListener('click', function () {
 
                 // Log the results once all SDAT files are processed
                 if (sdatFilesProcessed === sdatFolder.length) {
-                    const sortedKeys = Object.keys(volumeByStartTime).sort();
-                    sortedKeys.forEach(key => {
-                        sortedVolumeByStartTime[key] = volumeByStartTime[key];
-                    });
-                    console.log('Volume Data by Date:', sortedVolumeByStartTime);
+                    console.log('SDAT Results ID742:', sdatResults742);
+                    console.log('SDAT Results ID735:', sdatResults735);
                 }
             };
 
@@ -113,7 +116,9 @@ document.getElementById('processData').addEventListener('click', function () {
                     const end = timePeriod.getAttribute('end');
                     if (end) {
                         const date = new Date(end); // Parse the date
-                        return Math.floor(date.getTime() / 1000); // Convert to UTC timestamp (seconds)
+                        let roundedTime =  Math.floor(date.getTime() / 1000); // Convert to UTC timestamp (seconds)
+                        roundedTime = adjustTimestamp(roundedTime);
+                        return roundedTime;
                     }
                     return null;
                 }).filter(date => date !== null);
@@ -201,6 +206,7 @@ document.getElementById('processData').addEventListener('click', function () {
                             return acc;
                         }, {});
 
+                    console.log(`reversed esl: ${reversedEslResults}`);
                     // Initialize cumulative consumption
                     Object.keys(reversedEslResults).forEach(date => {
                         const eslValue = reversedEslResults[date];
@@ -210,18 +216,18 @@ document.getElementById('processData').addEventListener('click', function () {
                         let cumulativeConsumption = 0;
 
                         // Subtract previous days' SDAT data from the ESL value
-                        let timestamp = date
-                        timestamp -= 86400 // Go back one day to start subtracting
+                        effectiveMeterReadings[date] = eslValue
+                        date -= 86400 // Go back one day to start subtracting
 
                         // Iterate backward through the days until we have no more SDAT data
                         while (true) {
-                            const dailyVolume = volumeByStartTime[timestamp];
+                            const dailyVolume = sdatResults742[timestamp];
                             if (!effectiveMeterReadings.hasOwnProperty(timestamp)) {
                                 cumulativeConsumption += dailyVolume; // Accumulate consumption
                                 effectiveMeterReadings[timestamp] = eslValue - cumulativeConsumption; // Calculate effective reading
                             }
                             // Stop if we've gone past the beginning of the available SDAT data
-                            if (!volumeByStartTime.hasOwnProperty(timestamp) || sortedEslResults.hasOwnProperty(timestamp)) {
+                            if (!sdatFolder.hasOwnProperty(timestamp) || sortedEslResults.hasOwnProperty(timestamp)) {
                                 break; // Exit if there's no volume data for this date
                             }
 
@@ -241,7 +247,7 @@ document.getElementById('processData').addEventListener('click', function () {
                         }
                     });*/
 
-                    console.log('Effective Meter Readings:', Object.keys(effectiveMeterReadings).length);
+                    console.log('Effective Meter Readings:', effectiveMeterReadings);
                 }
             };
 
@@ -253,29 +259,24 @@ document.getElementById('processData').addEventListener('click', function () {
 
 
 
-
-
-
-
-
     // Export CSV functionality
     document.getElementById('exportCSV').addEventListener('click', function () {
-        exportToCSV(effectiveMeterReadings);
+        exportToCSV(sdatResults742, sdatResults735);
     });
 
     time = document.getElementById('timeRange').value;
     // Add event listener for the createDiagram button
     document.getElementById('createDiagram').addEventListener('click', function () {
-        createDiagram(sortedEslResults, time);
+        createDiagram(sortedEslResults, );
     });
 
-    function createDiagram(datas, time) {
-        const labels = Object.keys(datas);
+    function createDiagram(dates, time) {
+        const labels = Object.keys(dates);
         const data = {
             labels: labels,
             datasets: [{
-                label: `Zählerstand nach ${time}`, // Use the selected time for the label
-                data: Object.values(datas),
+                label: `Zählerstand nach ${time}`,
+                data: Object.values(dates),
                 fill: false,
                 borderColor: 'rgb(75, 192, 192)',
                 tension: 0.1
@@ -295,29 +296,74 @@ document.getElementById('processData').addEventListener('click', function () {
         });
     }
 
+// Function to adjust the timestamp
+    function adjustTimestamp(originalTimestamp) {
+        // Convert the timestamp (in seconds) to a Date object
+        let date = new Date(originalTimestamp * 1000); // Convert to milliseconds
+
+        // Set hours, minutes, seconds, and milliseconds to zero (00:00:00) in UTC
+        date.setUTCHours(0, 0, 0, 0);
+
+        // Add one day
+        date.setUTCDate(date.getUTCDate() + 1);
+
+        // Convert back to a timestamp (in seconds)
+        return Math.floor(date.getTime() / 1000); // Convert back to seconds
+    }
+
+
+
 
 
     // Function to export data to CSV
-    function exportToCSV(data) {
-        const rows = [['timestamp','value']];
-
-        Object.keys(data).forEach(timestamp => {
-            rows.push([timestamp, data[timestamp]]);
+    function exportToCSV(data742, data735) {
+        // Prepare rows for ID742
+        const rows742 = [['timestamp', 'value']];
+        Object.keys(data742).forEach(timestamp => {
+            rows742.push([timestamp, data742[timestamp]]);
         });
 
-        let csvContent = 'data:text/csv;charset=utf-8,';
-        rows.forEach(row => {
-            csvContent += row.join(';') + '\n';
+        // Prepare rows for ID735
+        const rows735 = [['timestamp', 'value']];
+        Object.keys(data735).forEach(timestamp => {
+            rows735.push([timestamp, data735[timestamp]]);
         });
 
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement('a');
-        link.setAttribute('href', encodedUri);
-        link.setAttribute('download', 'ID742');
-        document.body.appendChild(link);
+        // Create CSV content for ID742
+        let csvContent742 = 'data:text/csv;charset=utf-8,';
+        rows742.forEach(row => {
+            csvContent742 += row.join(';') + '\n';
+        });
 
-        link.click();
+        // Create CSV content for ID735
+        let csvContent735 = 'data:text/csv;charset=utf-8,';
+        rows735.forEach(row => {
+            csvContent735 += row.join(';') + '\n';
+        });
+
+        // Encode URI for ID742
+        const encodedUri742 = encodeURI(csvContent742);
+        const link742 = document.createElement('a');
+        link742.setAttribute('href', encodedUri742);
+        link742.setAttribute('download', 'ID742.csv'); // Change the file name to .csv
+        document.body.appendChild(link742);
+
+        // Trigger download for ID742
+        link742.click();
+        document.body.removeChild(link742); // Remove the link after triggering
+
+        // Encode URI for ID735
+        const encodedUri735 = encodeURI(csvContent735);
+        const link735 = document.createElement('a');
+        link735.setAttribute('href', encodedUri735);
+        link735.setAttribute('download', 'ID735.csv'); // Change the file name to .csv
+        document.body.appendChild(link735);
+
+        // Trigger download for ID735
+        link735.click();
+        document.body.removeChild(link735); // Remove the link after triggering
     }
+
 });
 
 
