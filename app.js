@@ -4,7 +4,6 @@ document.getElementById('processData').addEventListener('click', function () {
     let time = document.getElementById('timeRange').value;
     let sortedEslResults = {};
     let sortedEinspeisungResults = {};
-    const sortedVolumeByStartTime = {};
     time = parseInt(time);
 
     // Check if no files are selected
@@ -20,9 +19,9 @@ document.getElementById('processData').addEventListener('click', function () {
 
     let sdatFilesProcessed = 0; // Counter for processed SDAT files
     let eslFilesProcessed = 0; // Counter for processed ESL files
-    const volumeByStartTime = {}; // To store volume data by date
     const eslResults = {}; // To store ESL results by end date
-    const effectiveMeterReadings = {}; // To store effective meter readings
+    const effectiveMeterReadings742 = {}; // To store effective meter readings
+    const effectiveMeterReadings735 = {}
     const eslEinspeisung = {};
     const sdatResults742 = {}; // Dictionary for SDAT ID742
     const sdatResults735 = {}; // Dictionary for SDAT ID735
@@ -43,16 +42,19 @@ document.getElementById('processData').addEventListener('click', function () {
                 const documentID = xmlDoc.getElementsByTagName('rsm:DocumentID')[0]?.textContent;
 
                 if (startDateTime) {
-                    let startTime = new Date(startDateTime).getTime() / 1000;
-                    startTime = adjustTimestamp(startTime)
+                    let startTime = new Date(startDateTime).getTime() / 1000; // Convert to UNIX timestamp in seconds
+                    startTime = adjustTimestamp(startTime); // Adjust timestamp if necessary
                     const totalSequences = xmlDoc.getElementsByTagName('rsm:Sequence').length;
 
-                    time = 96; // Can be adjusted as per requirement
-                    const days = Math.floor(totalSequences / time);
+                    const timeSlotsPerDay = 96; // Number of sequences per day
+                    const days = Math.floor(totalSequences / timeSlotsPerDay); // Calculate number of complete days
+
                     for (let x = 0; x < days; x++) {
                         let fileVolume = 0;
-                        for (let y = 0; y < time; y++) {
-                            const index = x * time + y;
+
+                        // Sum up the 96 sequences for each day
+                        for (let y = 0; y < timeSlotsPerDay; y++) {
+                            const index = x * timeSlotsPerDay + y;
                             if (index < volumes.length) {
                                 const volumeValue = parseFloat(volumes[index]?.textContent);
                                 if (!isNaN(volumeValue)) {
@@ -64,24 +66,21 @@ document.getElementById('processData').addEventListener('click', function () {
                             }
                         }
 
-
-
                         // Determine which dictionary to store the result in based on Document ID
                         if (documentID && documentID.includes('ID742')) {
                             if (!(startTime in sdatResults742)) {
                                 sdatResults742[startTime] = fileVolume;
-                            } else {
-                                sdatResults742[startTime] += fileVolume;
                             }
+                            // Do nothing if startTime is already present
                         } else if (documentID && documentID.includes('ID735')) {
                             if (!(startTime in sdatResults735)) {
                                 sdatResults735[startTime] = fileVolume;
-                            } else {
-                                sdatResults735[startTime] += fileVolume;
                             }
+                            // Do nothing if startTime is already present
                         }
-                        startTime += 86400 // Increment date and accumulate daily volume
 
+                        // Increment to the next day
+                        startTime += 86400; // 86400 seconds = 1 day
                     }
                 }
 
@@ -89,8 +88,8 @@ document.getElementById('processData').addEventListener('click', function () {
 
                 // Log the results once all SDAT files are processed
                 if (sdatFilesProcessed === sdatFolder.length) {
-                    console.log('SDAT Results ID742:', sdatResults742);
-                    console.log('SDAT Results ID735:', sdatResults735);
+                    console.log('SDAT Results ID742:', sdatResults742);;
+                    //console.log('SDAT Results ID735:', sdatResults735);
                 }
             };
 
@@ -99,6 +98,7 @@ document.getElementById('processData').addEventListener('click', function () {
             sdatFilesProcessed++;
         }
     }
+
 
     // Processing ESL files
     for (let i = 0; i < eslFolder.length; i++) {
@@ -112,72 +112,54 @@ document.getElementById('processData').addEventListener('click', function () {
                 const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
 
                 const timePeriods = xmlDoc.getElementsByTagName('TimePeriod');
-                const endDates = Array.from(timePeriods).map(timePeriod => {
-                    const end = timePeriod.getAttribute('end');
-                    if (end) {
-                        const date = new Date(end); // Parse the date
-                        let roundedTime =  Math.floor(date.getTime() / 1000); // Convert to UTC timestamp (seconds)
+
+                // Iterate over each TimePeriod
+                Array.from(timePeriods).forEach(timePeriod => {
+                    const endDate = timePeriod.getAttribute('end');
+                    if (endDate) {
+                        let roundedTime = new Date(endDate).getTime() / 1000; // Convert to UTC timestamp (seconds)
                         roundedTime = adjustTimestamp(roundedTime);
-                        return roundedTime;
-                    }
-                    return null;
-                }).filter(date => date !== null);
 
-                const valueRows = Array.from(xmlDoc.getElementsByTagName('ValueRow'));
+                        let value1 = 0, value2 = 0; // Initialize values for Bezug
+                        let value3 = 0, value4 = 0; // Initialize values for Einspeisung
 
-                // Initialize variables to store values
-                let value1 = null, value2 = null; // For Bezug
-                let value3 = null, value4 = null; // For Einspeisung
+                        const valueRows = Array.from(timePeriod.getElementsByTagName('ValueRow'));
 
-                for (const row of valueRows) {
-                    const obisCode = row.getAttribute('obis');
-                    const value = parseFloat(row.getAttribute('value'));
+                        // Accumulate all matching OBIS code values
+                        valueRows.forEach(row => {
+                            const obisCode = row.getAttribute('obis');
+                            const value = parseFloat(row.getAttribute('value'));
 
-                    // Check for Bezug values
-                    if (value1 === null && obisCode === '1-1:1.8.1' && !isNaN(value)) {
-                        value1 = value; // First matching value for '1-1:1.8.1'
-                    }
-                    if (value2 === null && obisCode === '1-1:1.8.2' && !isNaN(value)) {
-                        value2 = value; // First matching value for '1-1:1.8.2'
-                    }
+                            if (!isNaN(value)) {
+                                // Accumulate Bezug values
+                                if (obisCode === '1-1:1.8.1') {
+                                    value1 += value;
+                                }
+                                if (obisCode === '1-1:1.8.2') {
+                                    value2 += value;
+                                }
 
-                    // Check for Einspeisung values
-                    if (value3 === null && obisCode === '1-1:2.8.1' && !isNaN(value)) {
-                        value3 = value; // First matching value for '1-1:2.8.1'
-                    }
-                    if (value4 === null && obisCode === '1-1:2.8.2' && !isNaN(value)) {
-                        value4 = value; // First matching value for '1-1:2.8.2'
-                    }
+                                // Accumulate Einspeisung values
+                                if (obisCode === '1-1:2.8.1') {
+                                    value3 += value;
+                                }
+                                if (obisCode === '1-1:2.8.2') {
+                                    value4 += value;
+                                }
+                            }
+                        });
 
-                    // Stop iterating if all values are found
-                    if (value1 !== null && value2 !== null && value3 !== null && value4 !== null) {
-                        break;
-                    }
-                }
-
-                // Check if all values for Bezug and Einspeisung were found
-                if (value1 !== null && value2 !== null) {
-                    const totalValue = value1 + value2; // Sum of Bezug values
-
-                    // Store the sum of the values by end date
-                    endDates.forEach(endDate => {
-                        if (!(endDate in eslResults)) {
-                            eslResults[endDate] = totalValue; // Store in eslResults
+                        // Add to eslResults if not already present
+                        if (!(roundedTime in eslResults) && (value1 + value2 > 0)) {
+                            eslResults[roundedTime] = value1 + value2; // Sum of Bezug values
                         }
-                    });
-                }
 
-                if (value3 !== null && value4 !== null) {
-                    const totalValue2 = value3 + value4; // Sum of Einspeisung values
-
-                    // Store the sum of the values by end date
-                    endDates.forEach(endDate => {
-                        if (!(endDate in eslEinspeisung)) {
-                            eslEinspeisung[endDate] = totalValue2; // Store in eslEinspeisung
+                        // Add to eslEinspeisung if not already present
+                        if (!(roundedTime in eslEinspeisung) && (value3 + value4 > 0)) {
+                            eslEinspeisung[roundedTime] = value3 + value4; // Sum of Einspeisung values
                         }
-                    });
-                }
-
+                    }
+                });
 
                 eslFilesProcessed++;
 
@@ -196,66 +178,53 @@ document.getElementById('processData').addEventListener('click', function () {
                     }, {});
 
                     console.log('742: ', sortedEslResults);
-                    console.log('735: ', sortedEinspeisungResults);
+                    //console.log('735: ', sortedEinspeisungResults);
+
+                    const meter742 = calculateEffectiveMeterReadings(sortedEslResults, sdatResults742, effectiveMeterReadings742);
+                    const meter735 = calculateEffectiveMeterReadings(eslEinspeisung, sdatResults735, effectiveMeterReadings735);
 
 
+                    // Compute effective meter readings
+                    function calculateEffectiveMeterReadings(esl, sdat, dict) {
+                        Object.keys(esl).forEach(dateStr => {
+                            const date = parseInt(dateStr); // Convert date string to an integer
+                            const eslValue = esl[date];
+                            let cumulativeConsumption = 0;
+                            let timestamp = date - 86400; // Go back one day (86400 seconds)
 
+                            // Set the initial value in effectiveMeterReadings to the current eslValue
+                            dict[date] = eslValue;
+                            // Continue to iterate backward in time
+                            while (true) {
+                                const dailyVolume = sdat[timestamp];
 
-                    // Initialize cumulative consumption
-                    Object.keys(sortedEslResults).forEach(date => {
-                        const eslValue = sortedEslResults[date];
+                                // Add daily volume to cumulative consumption if it exists
+                                if (dailyVolume) {
+                                    cumulativeConsumption += dailyVolume;
+                                }
 
-                        // Initialize cumulative consumption for the current ESL date
-                        let cumulativeConsumption = 0;
+                                // If the current timestamp doesn't exist in effectiveMeterReadings, update it
+                                if (!dict.hasOwnProperty(timestamp)) {
+                                    dict[timestamp] = eslValue - cumulativeConsumption;
+                                }
 
-                        let timestamp = date - 86400; // Go back one day to start subtracting
+                                // Stop if timestamp doesn't exist in sdatResults742 or if timestamp already exists in sortedEslResults
+                                if (!sdat.hasOwnProperty(timestamp) || esl.hasOwnProperty(timestamp)) {
+                                    break;
+                                }
 
-                        // Subtract previous days' SDAT data from the ESL value
-                        effectiveMeterReadings[date] = eslValue; // Store ESL value for today
-
-                        // Check if the previous day's timestamp is already in effective meter readings
-                        if (sortedEslResults.hasOwnProperty(timestamp)) {
-                            console.log('timestamp: ', timestamp, 'already in effective meter');
-                        }
-
-                        // Iterate backward through the days until we have no more SDAT data
-                        while (true) {
-                            const dailyVolume = sdatResults742[timestamp];
-
-                            // Only accumulate if dailyVolume is defined
-                            if (dailyVolume) {
-                                cumulativeConsumption += dailyVolume; // Accumulate consumption
+                                // Move back one day (86400 seconds)
+                                timestamp -= 86400;
                             }
-
-                            // Calculate effective reading if timestamp is not already in effectiveMeterReadings
-                            if (!effectiveMeterReadings.hasOwnProperty(timestamp)) {
-                                effectiveMeterReadings[timestamp] = eslValue - cumulativeConsumption; // Calculate effective reading
-                            }
-
-                            // Stop if we've gone past the beginning of the available SDAT data
-                            if (!sdatResults742.hasOwnProperty(timestamp) || sortedEslResults.hasOwnProperty(timestamp)) {
-                                break; // Exit if there's no volume data for this date
-                            }
-
-                            // Move to the previous day
-                            timestamp -= 86400;
-                        }
-                    });
+                        });
+                        return dict;
+                    }
 
 
-                    //Now handle SDAT dates that are greater than the last ESL date
-                    /*const lastEslDate = new Date(Object.keys(sortedEslResults).pop());
-                    let lastEffectiveValue = Object.values(sortedEslResults).pop(); // Get last ESL value
 
-                    Object.keys(volumeByStartTime).forEach(sdatDate => {
-                        const sdatDateObj = new Date(sdatDate);
-                        if (sdatDateObj >= lastEslDate) {
-                            lastEffectiveValue += volumeByStartTime[sdatDate]; // Accumulate to last effective value
-                            effectiveMeterReadings[sdatDate] = lastEffectiveValue; // Store new effective reading for SDAT date
-                        }
-                    });*/
 
-                    console.log('Effective Meter Readings 742:', effectiveMeterReadings);
+                    console.log('Effective Meter Readings 742:', meter742);
+                    console.log('Effective Meter Readings 735:', meter735);
                 }
             };
 
@@ -269,13 +238,13 @@ document.getElementById('processData').addEventListener('click', function () {
 
     // Export CSV functionality
     document.getElementById('exportCSV').addEventListener('click', function () {
-        exportToCSV(effectiveMeterReadings, sdatResults735);
+        exportToCSV(effectiveMeterReadings742, sdatResults735);
     });
 
     time = document.getElementById('timeRange').value;
     // Add event listener for the createDiagram button
     document.getElementById('createDiagram').addEventListener('click', function () {
-        createDiagram(effectiveMeterReadings, 'ZEIT');
+        createDiagram(effectiveMeterReadings742, 'ZEIT');
     });
 
     function formatDate(timestamp) {
