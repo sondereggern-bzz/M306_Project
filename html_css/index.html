@@ -21,10 +21,11 @@
   <p>
     Willkommen bei der Energieagentur Bünzli! Wir freuen uns, Ihnen dabei zu helfen, Ihre Energie effizient zu nutzen
     Der Verbrauch und die Einspeisung von Strom hat auf der ganzen Welt eine wichtige Rolle in der Wirtschaft. Mit unseren Diensten können Sie die Daten für Energiebezug und Energieeinspeisung sehen. Sie sehen ein Liniendiagramm mit der möglichkeit die Skalierung zu verändern. Die möglichen Zeitachsen sind: Tage, Wochen, Monate, Jahre.  </p>
-
+  <h2> Diagramm</h2>
   <div class="container">
     <div class="box">
       <span>Diagramm</span>
+      <canvas id="meteringChart"></canvas> <!-- Keep the ID the same as in the JavaScript -->
     </div>
     </div>
   <h2>Benutzerspezifische Abfrage anhand verschiedener Skalierungen</h2>
@@ -45,7 +46,7 @@
     </div>
 
     <div class="file-upload">
-      <label for="eslinput">esl Dateien</label>
+      <label for="eslinput">ESL Dateien</label>
       <input type="file" id="eslinput" webkitdirectory multiple>
       <p>Bitte hier gewünschte Datei auswählen.</p>
     </div>
