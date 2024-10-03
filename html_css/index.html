@@ -9,10 +9,15 @@
 <body>
 <header>
   <br>
-  <a class='button' href='index.html'><img src="../images/logo.png" alt="Logo"></a>
+  <a class='button' href='index.html'><img src="/images/logo.png" alt="Logo"></a>
   <h1>Energieagentur Bünzli Stromverbrauch</h1>
   <br>
 </header>
+<div>
+  <img class="headerimg" src="/images/solar2.png" alt="solar">
+</div>
+
+
 
 <div class="content">
   <div class='headline'>
@@ -20,14 +25,18 @@
   </div>
   <p>
     Willkommen bei der Energieagentur Bünzli! Wir freuen uns, Ihnen dabei zu helfen, Ihre Energie effizient zu nutzen
-    Der Verbrauch und die Einspeisung von Strom hat auf der ganzen Welt eine wichtige Rolle in der Wirtschaft. Mit unseren Diensten können Sie die Daten für Energiebezug und Energieeinspeisung sehen. Sie sehen ein Liniendiagramm mit der möglichkeit die Skalierung zu verändern. Die möglichen Zeitachsen sind: Tage, Wochen, Monate, Jahre.  </p>
+    Der Verbrauch und die Einspeisung von Strom hat auf der ganzen Welt eine wichtige Rolle in der Wirtschaft. Mit unseren Diensten können Sie die Daten für Energiebezug und Energieeinspeisung sehen. Sie sehen ein Liniendiagramm mit der möglichkeit die Skalierung zu verändern. Die möglichen Zeitachsen sind: Tage, Wochen, Monate, Jahre.
+  </p>
+
+
   <h2> Diagramm</h2>
   <div class="container">
     <div class="box">
       <span>Diagramm</span>
       <canvas id="meteringChart"></canvas> <!-- Keep the ID the same as in the JavaScript -->
     </div>
-    </div>
+  </div>
+
   <h2>Benutzerspezifische Abfrage anhand verschiedener Skalierungen</h2>
   <label for="diagramFilter">Skalierung</label>
   <select id="diagramFilter">
