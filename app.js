@@ -2,7 +2,7 @@ document.getElementById('processData').addEventListener('click', function () {
     const sdatFolder = document.getElementById('sdatFolder').files;
     const eslFolder = document.getElementById('eslFolder').files;
     let time = document.getElementById('timeRange').value;
-    let sortedEslResults = NaN
+    let sortedEslResults = {}
     const sortedVolumeByStartTime = {};
     time = parseInt(time)
 
@@ -22,6 +22,7 @@ document.getElementById('processData').addEventListener('click', function () {
     const volumeByStartTime = {}; // To store volume data by date
     const eslResults = {}; // To store ESL results by end date
     const effectiveMeterReadings = {}; // To store effective meter readings
+    const eslEinspeisung = {}
 
     // Processing SDAT files
     for (let i = 0; i < sdatFolder.length; i++) {
@@ -117,7 +118,7 @@ document.getElementById('processData').addEventListener('click', function () {
                 }).filter(date => date !== null);
 
                 const valueRows = Array.from(xmlDoc.getElementsByTagName('ValueRow'));
-                let value1 = null, value2 = null; // Set to null to find only the first matching value
+                let value1 = null, value2 = null, value3 = null, value4 = null; // Set to null to find only the first matching value
 
                 for (const row of valueRows) {
                     const obisCode = row.getAttribute('obis');
@@ -130,19 +131,31 @@ document.getElementById('processData').addEventListener('click', function () {
                         value2 = value; // Take only the first matching value for '1-1:1.8.2'
                     }
 
+                    if (value3 === null && obisCode === '1-1:2.8.1' && !isNaN(value)) {
+                        value3 = value; // Take only the first matching value for '1-1:1.8.1'
+                    }
+                    if (value4 === null && obisCode === '1-1:2.8.2' && !isNaN(value)) {
+                        value4 = value; // Take only the first matching value for '1-1:1.8.2'
+                    }
+
+
                     // Stop iterating if both values are found
-                    if (value1 !== null && value2 !== null) {
+                    if (value1 !== null && value2 !== null && value3 !== null && value4 !== null) {
                         break;
                     }
                 }
 
-                if (value1 !== null && value2 !== null) {
+                if (value1 !== null && value2 !== null && value3 !== null && value4 !== null) {
                     const totalValue = value1 + value2;
+                    const totalValue2 = value3 + value4
 
                     // Store the sum of the values by end date
                     endDates.forEach(endDate => {
                         if (!(endDate in eslResults)) {
                             eslResults[endDate] = totalValue;
+                        }
+                        if (!(endDate in eslEinspeisung)) {
+                            eslEinspeisung[endDate] = totalValue2;
                         }
                     });
                 }
@@ -157,35 +170,45 @@ document.getElementById('processData').addEventListener('click', function () {
                     }, {});
                     console.log('ESL Results by End Date:', sortedEslResults);
 
+
+                    const reversedEslResults = Object.keys(sortedEslResults)
+                        .reverse() // Reverse the array of keys
+                        .reduce((acc, key) => {
+                            acc[key] = sortedEslResults[key]; // Rebuild the object with reversed keys
+                            return acc;
+                        }, {});
+
                     // Initialize cumulative consumption
-                    Object.keys(sortedEslResults).forEach(date => {
-                        const eslValue = sortedEslResults[date];
+                    Object.keys(reversedEslResults).forEach(date => {
+                        const eslValue = reversedEslResults[date];
+
 
                         // Initialize cumulative consumption for the current ESL date
                         let cumulativeConsumption = 0;
 
                         // Subtract previous days' SDAT data from the ESL value
-                        const parsedDate = new Date(date);
-                        parsedDate.setDate(parsedDate.getDate() - 86400); // Go back one day to start subtracting
+                        let timestamp = date
+                        timestamp -= 86400 // Go back one day to start subtracting
 
                         // Iterate backward through the days until we have no more SDAT data
                         while (true) {
-                            const dailyVolume = volumeByStartTime[parsedDate] || 0;
-                            if (!effectiveMeterReadings.hasOwnProperty(parsedDate)) {
+                            const dailyVolume = volumeByStartTime[timestamp];
+                            console.log(dailyVolume)
+                            if (!effectiveMeterReadings.hasOwnProperty(timestamp)) {
                                 cumulativeConsumption += dailyVolume; // Accumulate consumption
-                                effectiveMeterReadings[parsedDate] = eslValue - cumulativeConsumption; // Calculate effective reading
+                                effectiveMeterReadings[timestamp] = eslValue - cumulativeConsumption; // Calculate effective reading
                             }
                             // Stop if we've gone past the beginning of the available SDAT data
-                            if (!volumeByStartTime.hasOwnProperty(parsedDate)) {
+                            if (!volumeByStartTime.hasOwnProperty(timestamp) || sortedEslResults.hasOwnProperty(timestamp)) {
                                 break; // Exit if there's no volume data for this date
                             }
 
-                            parsedDate.setDate(parsedDate.getDate() - 86400); // Move to the previous day
+                            timestamp -= 86400 // Move to the previous day
                         }
                     });
 
-                    // Now handle SDAT dates that are greater than the last ESL date
-                    const lastEslDate = new Date(Object.keys(sortedEslResults).pop());
+                     //Now handle SDAT dates that are greater than the last ESL date
+                    /*const lastEslDate = new Date(Object.keys(sortedEslResults).pop());
                     let lastEffectiveValue = Object.values(sortedEslResults).pop(); // Get last ESL value
 
                     Object.keys(volumeByStartTime).forEach(sdatDate => {
@@ -194,7 +217,7 @@ document.getElementById('processData').addEventListener('click', function () {
                             lastEffectiveValue += volumeByStartTime[sdatDate]; // Accumulate to last effective value
                             effectiveMeterReadings[sdatDate] = lastEffectiveValue; // Store new effective reading for SDAT date
                         }
-                    });
+                    });*/
 
                     console.log('Effective Meter Readings:', effectiveMeterReadings);
                 }
@@ -257,18 +280,18 @@ document.getElementById('processData').addEventListener('click', function () {
         const rows = [['timestamp','value']];
 
         Object.keys(data).forEach(timestamp => {
-            rows.push([new Date(timestamp).getTime(), data[timestamp]]);
+            rows.push([timestamp, data[timestamp]]);
         });
 
         let csvContent = 'data:text/csv;charset=utf-8,';
         rows.forEach(row => {
-            csvContent += row.join(',') + '\n';
+            csvContent += row.join(';') + '\n';
         });
 
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement('a');
         link.setAttribute('href', encodedUri);
-        link.setAttribute('download', 'meter_readings.csv');
+        link.setAttribute('download', 'ID742');
         document.body.appendChild(link);
 
         link.click();
