@@ -1,119 +1,102 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Anwendung - Energieagentur Bünzli</title>
-  <link rel='stylesheet' href='style.css'>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anwendung - Energieagentur Bünzli</title>
+    <link rel='stylesheet' href='style.css'>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="app.js" defer></script>
 </head>
 <body>
 <header>
-  <br>
-  <a class='button' href='index.html'><img src="/images/logo.png" alt="Logo"></a>
-  <h1>Energieagentur Bünzli Stromverbrauch</h1>
-  <br>
+    <br>
+    <a class='button' href='index.html'><img src="/images/logo.png" alt="Logo"></a>
+    <h1>Energieagentur Bünzli Stromverbrauch</h1>
+    <br>
 </header>
 <div>
-  <img class="headerimg" src="/images/solar2.png" alt="solar">
+    <img class="headerimg" src="/images/solar2.png" alt="solar">
 </div>
 
 
-
 <div class="content">
-  <div class='headline'>
-  <h1>Strombezug/-Einspeisung</h1>
-  </div>
-  <p>
-    Willkommen bei der Energieagentur Bünzli! Wir freuen uns, Ihnen dabei zu helfen, Ihre Energie effizient zu nutzen
-    Der Verbrauch und die Einspeisung von Strom hat auf der ganzen Welt eine wichtige Rolle in der Wirtschaft. Mit unseren Diensten können Sie die Daten für Energiebezug und Energieeinspeisung sehen. Sie sehen ein Liniendiagramm mit der möglichkeit die Skalierung zu verändern. Die möglichen Zeitachsen sind: Tage, Wochen, Monate, Jahre.
-  </p>
-
-
-  <h2> Diagramm</h2>
-  <div class="container">
-    <div class="box">
-      <canvas id="meteringChart"></canvas> <!-- Keep the ID the same as in the JavaScript -->
+    <div class='headline'>
+        <h1>Strombezug/-Einspeisung</h1>
     </div>
-  </div>
+    <p>
+        Willkommen bei der Energieagentur Bünzli! Wir freuen uns, Ihnen dabei zu helfen, Ihre Energie effizient zu
+        nutzen
+        Der Verbrauch und die Einspeisung von Strom hat auf der ganzen Welt eine wichtige Rolle in der Wirtschaft. Mit
+        unseren Diensten können Sie die Daten für Energiebezug und Energieeinspeisung sehen. Sie sehen ein
+        Liniendiagramm mit der möglichkeit die Skalierung zu verändern. Die möglichen Zeitachsen sind: Tage, Wochen,
+        Monate, Jahre.
+    </p>
 
-  <h2>Benutzerspezifische Abfrage anhand verschiedener Skalierungen</h2>
-  <label for="timeRange">Skalierung</label>
-  <select id="timeRange">
-    <option value="1" selected >Tage</option>
-    <option value="2">Wochen</option>
-    <option value="3">Monate</option>
-    <option value="4" >Jahre</option>
-  </select>
 
-  <h2>Upload</h2>
-  <div class="upload-container">
-    <div class="file-upload">
-      <label for="sdatfolder">sDat Dateien</label>
-      <input type="file" id="sdatFolder" webkitdirectory multiple accept=".xml">
-      <p>Bitte hier gewünschte Datei auswählen.</p>
+    <h2> Diagramm</h2>
+    <div class="container">
+        <div class="box">
+            <canvas id="meteringChart"></canvas>
+        </div>
+        <div class="box">
+            <canvas id="meteringChart2"></canvas>
+        </div>
     </div>
 
-    <div class="file-upload">
-      <label for="eslFolder">ESL Dateien</label>
-      <input type="file" id="eslFolder" webkitdirectory multiple accept=".xml">
-      <p>Bitte hier gewünschte Datei auswählen.</p>
+    <h2>Benutzerspezifische Abfrage anhand verschiedener Skalierungen</h2>
+    <label for="timeRange">Time Range:</label>
+    <select id="timeRange">
+        <option value="Tagen">Daily</option>
+        <option value="Wochen">Weekly</option>
+        <option value="Monaten">Monthly</option>
+    </select>
+
+    <h2>Upload</h2>
+    <div class="upload-container">
+        <div class="file-upload">
+            <label for="sdatFolder">sDat Dateien</label>
+            <input type="file" id="sdatFolder" webkitdirectory multiple>
+            <p>Bitte hier gewünschte Datei auswählen.</p>
+        </div>
+
+        <div class="file-upload">
+            <label for="eslFolder">ESL Dateien</label>
+            <input type="file" id="eslFolder" webkitdirectory multiple>
+            <p>Bitte hier gewünschte Datei auswählen.</p>
+        </div>
     </div>
-  </div>
     <div class='upload-button-container'>
-      <button id="processData">Daten verarbeiten</button>
-      <button id="createDiagram">Diagramm erstellen</button>
+        <button id="processData">Daten verarbeiten</button>
+        <button id="createDiagram">Diagramm erstellen</button>
     </div>
-  <br><br>
-<script>
-    // Test für den Dateiinhalt bei input
-    document.getElementById('submit_button').addEventListener('click', function() {
-        console.log("Neger")
-        const files = document.getElementById('eslinput').files;
-        const file_array = Array.from(files);
-        file_array.forEach(file => {
-            console.log('Dateiname:', file.name);
-            console.log(file.text())
-        });
-        Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = function(event){
-            const file_content = event.target.result;
-            console.log(`Inhalt der Datei ${file.name}:`, file_content);
-        };
+    <br><br>
 
-
-            reader.readAsText(file);
-        })});
-        // Neue Files werden in der file_array variabel gespeichert
-</script>
-
-
-<div id="exportModal">
-  <button id="exportCSV">Exportiere als CSV</button>
-  </div>
+    <div id="exportModal">
+        <button id="exportCSV">Exportiere als CSV</button>
+    </div>
 </div>
 </div>
 </body>
 <script src="app.js"></script>
 <footer>
-  <section>
-    <ul>
-      <li><h2>Nic Sonderegger </h2></li>
-      <li>Reberweg 30</li>
-      <li>8132 Egg</li>
-      <li>Schweiz</li>
-      <li>E-Mail: sondereggern@bzz.ch</li>
-    </ul>
-  </section>
-  <section>
-    <ul>
-      <li><h2>Links</h2></li>
-      <li><a href='impressum.html'>Impressum</a></li>
-      <li><a href='disclaimer.html'>Disclaimer</a></li>
-      <li><a href='datenschutzerklaerung.html'>Datenschutzerklärung</a></li>
-    </ul>
-  </section>
+    <section>
+        <ul>
+            <li><h2>Nic Sonderegger </h2></li>
+            <li>Reberweg 30</li>
+            <li>8132 Egg</li>
+            <li>Schweiz</li>
+            <li>E-Mail: sondereggern@bzz.ch</li>
+        </ul>
+    </section>
+    <section>
+        <ul>
+            <li><h2>Links</h2></li>
+            <li><a href='impressum.html'>Impressum</a></li>
+            <li><a href='disclaimer.html'>Disclaimer</a></li>
+            <li><a href='datenschutzerklaerung.html'>Datenschutzerklärung</a></li>
+        </ul>
+    </section>
 </footer>
 </html>
