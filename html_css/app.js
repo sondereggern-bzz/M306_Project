@@ -427,7 +427,45 @@ function exportToCSV(sensorID, data) {
     document.body.removeChild(link); // Clean up by removing the link
 }
 
-// Declare a variable to track if the button is currently being processed
+
+
+document.getElementById('exportJSON').addEventListener('click', function () {
+    console.log('Export button clicked'); // Log when the button is clicked
+    exportToJSON(); // Call the export function for JSON
+});
+
+function exportToJSON() {
+    // Create the JSON structure
+    const jsonData = [
+        {
+            "sensorId": "ID742",
+            "data": Object.entries(window.meter742).map(([ts, value]) => ({
+                "ts": ts,
+                "value": value
+            }))
+        },
+        {
+            "sensorId": "ID735",
+            "data": Object.entries(window.meter735).map(([ts, value]) => ({
+                "ts": ts,
+                "value": value
+            }))
+        }
+    ];
+
+    // Convert the JavaScript object to JSON string
+    const jsonString = JSON.stringify(jsonData, null, 4); // Pretty print with 4 spaces
+
+    // Create a Blob from the JSON string
+    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", '742_735.json'); // Filename for the JSON file
+    document.body.appendChild(link);
+    link.click(); // Programmatically click the link to trigger download
+    document.body.removeChild(link); // Clean up by removing the link
+}
 
 
 
