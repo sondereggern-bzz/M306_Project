@@ -1,10 +1,9 @@
 document.getElementById('processData').addEventListener('click', function () {
     const sdatFolder = document.getElementById('sdatFolder').files;
     const eslFolder = document.getElementById('eslFolder').files;
-    let time = document.getElementById('timeRange').value;
     let sortedEslResults = {};
     let sortedEinspeisungResults = {};
-    time = parseInt(time);
+
 
     if (sdatFolder.length === 0) {
         console.log('No SDAT files selected.');
@@ -81,7 +80,7 @@ document.getElementById('processData').addEventListener('click', function () {
                 sdatFilesProcessed++;
 
                 if (sdatFilesProcessed === sdatFolder.length) {
-                    console.log('SDAT Results ID742:', sdatResults742);
+
                 }
             };
 
@@ -156,13 +155,14 @@ document.getElementById('processData').addEventListener('click', function () {
                         return obj;
                     }, {});
 
-                    //console.log('742: ', sortedEslResults);
+
 
                     window.meter742 = calculateEffectiveMeterReadings(eslResults, sdatResults742, effectiveMeterReadings742);
                     window.meter735 = calculateEffectiveMeterReadings(eslEinspeisung, sdatResults735, effectiveMeterReadings735);
+                    document.getElementById('notification').innerText = 'Die Daten sind jetzt verarbeitet';
+                    console.log('jetzt')
+                    document.getElementById('notification').style.display = 'block';
 
-                    console.log(eslResults)
-                    console.log(eslEinspeisung);
 
 
                     function calculateEffectiveMeterReadings(esl, sdat, dict) {
@@ -184,7 +184,7 @@ document.getElementById('processData').addEventListener('click', function () {
                         return dict;
                     }
 
-                    console.log('Effective Meter Readings 742:', meter742);
+
                 }
             };
 
@@ -193,6 +193,7 @@ document.getElementById('processData').addEventListener('click', function () {
             eslFilesProcessed++;
         }
     }
+
 
     document.getElementById('createDiagram').addEventListener('click', function () {
         let timeRange = document.getElementById('timeRange').value;
@@ -292,6 +293,7 @@ document.getElementById('processData').addEventListener('click', function () {
         return monthlyData;
     }
 
+
     function getWeek(date) {
         const oneJan = new Date(date.getUTCFullYear(), 0, 1);
         const numberOfDays = Math.floor((date - oneJan) / (24 * 60 * 60 * 1000));
@@ -382,8 +384,52 @@ document.getElementById('processData').addEventListener('click', function () {
         const year = date.getUTCFullYear();
         return `${day}-${month}-${year}`;
     }
+
+
+
+
+
 });
 
 function adjustTimestamp(timestamp) {
     return Math.floor(timestamp / 3600) * 3600; // Adjust timestamp to hour
 }
+
+document.getElementById('exportCSV').addEventListener('click', function () {
+    console.log('Export button clicked'); // Log when the button is clicked
+    // Ensure only one call per button click for each meter
+    exportToCSV('ID742', window.meter742);
+    exportToCSV('ID735', window.meter735);
+});
+
+function exportToCSV(sensorID, data) {
+    // Check if data is not empty
+    if (Object.keys(data).length === 0) {
+        console.warn(`No data available for ${sensorID} to export.`);
+        return; // If there's no data, exit the function
+    }
+
+    // Convert the data object to CSV format
+    let csvContent = "timestamp;value\n"; // CSV header
+
+    Object.entries(data).forEach(([timestamp, value]) => {
+        csvContent += `${timestamp};${value}\n`; // Append each entry
+    });
+
+    // Create a Blob from the CSV content
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${sensorID}.csv`); // Filename based on sensorID
+    document.body.appendChild(link);
+    link.click(); // Programmatically click the link to trigger download
+    document.body.removeChild(link); // Clean up by removing the link
+}
+
+// Declare a variable to track if the button is currently being processed
+
+
+
+
+
