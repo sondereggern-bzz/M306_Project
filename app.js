@@ -200,7 +200,15 @@ document.getElementById('processData').addEventListener('click', function () {
         const filteredData735 = filterMeterData(timeRange, meter735)
 
 
-        createDiagram(filteredData742, filteredData735, timeRange)
+        createDiagram(filteredData742, filteredData735, timeRange, 'meteringChart');
+
+        timeRange = document.getElementById('timeRange').value; // Get the selected time range
+        const filteredData742Second = filterMeterData(timeRange, sdatResults742); // Filter the data for ID742
+        const filteredData735Second = filterMeterData(timeRange, sdatResults735); // Filter the data for ID735
+
+        createDiagram(filteredData742Second, filteredData735Second, timeRange, 'meteringChart2'); // Call the createDiagram function for the second chart
+
+
 
 
     });
@@ -290,7 +298,7 @@ document.getElementById('processData').addEventListener('click', function () {
         return Math.ceil((numberOfDays + oneJan.getUTCDay() + 1) / 7);
     }
 
-    function createDiagram(data742, data735, time) {
+    function createDiagram(data742, data735, time, canvasId) { // Accept canvasId as a parameter
         const labels = Object.keys(data742).map(timestamp => formatDate(timestamp));
         const dataset742 = Object.values(data742);
         const dataset735 = Object.values(data735);
@@ -315,14 +323,18 @@ document.getElementById('processData').addEventListener('click', function () {
             ]
         };
 
-        const ctx = document.getElementById('meteringChart').getContext('2d');
+        const ctx = document.getElementById(canvasId).getContext('2d'); // Get context based on canvasId
 
-        if (typeof window.chart !== 'undefined') {
-            window.chart.destroy();
+        // Destroy existing chart if it exists
+        if (typeof window.charts === 'undefined') {
+            window.charts = {};
+        }
+        if (typeof window.charts[canvasId] !== 'undefined') {
+            window.charts[canvasId].destroy();
         }
 
         // Creating the chart with zoom and pan options
-        window.chart = new Chart(ctx, {
+        window.charts[canvasId] = new Chart(ctx, {
             type: 'line',
             data: chartData,
             options: {
